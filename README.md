@@ -1,2 +1,12 @@
 # LLM-Hardware-Experiments
-Hardware design (EDA) experiment utilizing Large Language Models to design secure hardware
+Hardware design/Electrical Design Automation (EDA) experiments utilizing Large Language Models (LLM) to design secure hardware
+
+## Tools and Acknowledgements
+### Hardware
+* Icarus Verilog
+* Verilator
+* MyHDL
+* Rust-HDL
+
+### Large Language Models
+* Ollama
