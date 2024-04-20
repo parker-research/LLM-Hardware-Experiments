@@ -1,3 +1,22 @@
+#############################################
+###### Project-Specific Ignores #############
+#############################################
+
+
+# Log and data output files
+*.parquet
+*.sqlite3
+*.sqlite
+*.duckdb
+*.db
+*.log
+*.csv
+
+
+#############################################
+###### Python GitHub .gitignore file ########
+#############################################
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

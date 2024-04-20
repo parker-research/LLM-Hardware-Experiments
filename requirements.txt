@@ -1,0 +1,15 @@
+# requirements.txt
+
+# Install the dependencies from this requirements.txt file by doing:
+#   1: pip install --upgrade pip wheel
+#   2: pip install -r requirements.txt
+
+
+pip>=*
+wheel>=*
+
+polars~=0.20.21
+
+requests>=*
+loguru>=*
+pyyaml>=*
