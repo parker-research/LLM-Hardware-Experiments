@@ -13,3 +13,9 @@ polars~=0.20.21
 requests>=*
 loguru>=*
 pyyaml>=*
+
+# dev tools
+pytest>=*
+flake8>=*
+black>=*
+
