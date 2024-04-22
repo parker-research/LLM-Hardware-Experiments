@@ -20,13 +20,13 @@ def get_file_date_str(
     datetime_str_us = timestamp.strftime("%Y-%m-%d_%H-%M-%S-%f")
 
     if precision == "datetime_us":
-        return datetime_str_us
+        return datetime_str_us + "L"
     elif precision == "datetime_ms":
-        return datetime_str_us[:-3]
+        return datetime_str_us[:-3] + "L"
     elif precision == "datetime":
-        return timestamp.strftime("%Y-%m-%d_%H-%M-%S")
+        return timestamp.strftime("%Y-%m-%d_%H-%M-%S") + "L"
     elif precision == "date":
-        return timestamp.strftime("%Y-%m-%d")
+        return timestamp.strftime("%Y-%m-%d") + "L"
     else:
         raise ValueError(f"Unknown precision: {precision}")
 

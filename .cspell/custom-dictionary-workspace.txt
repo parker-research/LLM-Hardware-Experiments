@@ -3,6 +3,7 @@ endmodule
 Iverilog
 llms
 loguru
+ndjson
 Ollama
 orjson
 tinyllama
