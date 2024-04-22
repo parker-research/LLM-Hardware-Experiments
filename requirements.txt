@@ -10,6 +10,7 @@
 pip>=*
 wheel>=*
 
+
 ############################
 # General Packages #########
 ############################
@@ -20,14 +21,17 @@ pyyaml>=*
 gitpython>=*
 orjson>=*
 tqdm>=*
-torch>=*
-tensorflow>=*
+backoff>=*
+
 
 ############################
 # Large Language Models ####
 ############################
 ollama~=0.1.8
 
+
+torch>=*
+tensorflow>=*
 
 ###################
 # Dev Tools #######

@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from tqdm import tqdm
+import backoff
+from loguru import logger
 import ollama
 
 from llm_experiments.llms.llm_base import LlmBase
@@ -63,9 +66,25 @@ class OllamaLlm(LlmBase):
         assert isinstance(local_models, list)
         return local_models
 
+    @backoff.on_exception(
+        backoff.constant,
+        Exception,
+        interval=5,
+        max_tries=3,
+        on_backoff=lambda x: logger.info("Retrying Ollama pull..."),
+    )
     def init_model(self) -> None:
         # TODO: maybe check if the model is already local
-        ollama.pull(self.config.model_name)
+        logger.info(f"Downloading Ollama model: {self.config.model_name}")
+        with tqdm(desc=f"Pulling {self.config.model_name} model", unit=" byte") as progress_bar:
+            for resp in ollama.pull(self.config.model_name, stream=True):
+                # Docs: https://github.com/ollama/ollama/blob/main/docs/api.md#response-19
+                new_total = resp.get("total", 1)
+                new_progress = resp.get("completed", 0)
+                progress_bar.total = new_total
+                progress_bar.n = new_progress
+
+        logger.info(f"Downloaded Ollama model: {self.config.model_name}")
 
     def destroy_model(self) -> None:
         ollama.delete(self.config.model_name)

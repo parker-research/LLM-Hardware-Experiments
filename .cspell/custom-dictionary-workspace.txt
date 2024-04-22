@@ -7,5 +7,6 @@ ndjson
 Ollama
 orjson
 tinyllama
+tqdm
 Verilator
 Verilog
