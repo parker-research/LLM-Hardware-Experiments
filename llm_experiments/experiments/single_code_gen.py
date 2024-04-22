@@ -2,6 +2,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import uuid
 from datetime import datetime
+import traceback
 
 import orjson
 from loguru import logger
@@ -104,6 +105,7 @@ def do_experiment(
     # Step 6: Collect data on the results
     # TODO: consider refactoring to the top, and setting values to None if they're not available
     #  (which would allow for an easy early return)
+    # Put it in a TypedDict, and make a `from_llm_and_prompt()` method.
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
@@ -213,21 +215,42 @@ def run_experiment_all_inputs():
 
     # experiment_space = itertools.product([llm_list, problems])
 
+    global_stats: dict = {
+        "total_experiment_count": 0,
+        "total_passed_experiment_count": 0,
+        "total_error_experiment_count": 0,
+    }
+
     for llm in llm_list:
         llm.init_model()
         logger.info(f"Initialized LLM: {llm}")
 
         for problem in problems:
-            logger.info(f"Running experiment for problem: {problem}")
+            logger.info(f"Running experiment for {llm=}, {problem=}")
+            global_stats["total_experiment_count"] += 1
 
-            experiment_data = do_experiment(
-                llm=llm,
-                problem=problem,
-                working_dir=working_dir,
-                logging_attributes={
-                    "experiment_group_start_timestamp": experiment_group_start_timestamp
-                },
-            )
+            try:
+                experiment_data = do_experiment(
+                    llm=llm,
+                    problem=problem,
+                    working_dir=working_dir,
+                    logging_attributes={
+                        "experiment_group_start_timestamp": experiment_group_start_timestamp
+                    },
+                )
+            except Exception as e:
+                logger.error(f"Error in experiment: {llm=}, {problem=}, {e=}")
+                logger.error(traceback.format_exc())
+                experiment_data = {
+                    "experiment_group_start_timestamp": experiment_group_start_timestamp,
+                    "error": str(e),
+                }
+                global_stats["total_error_experiment_count"] += 1
+
+            if experiment_data.get("was_compile_success"):
+                global_stats["total_passed_experiment_count"] += 1
+
+            logger.info(f"Done experiment. {experiment_data['was_compile_success']=}")
 
             with open(working_dir / "experiment_data.json", "ab") as f:
                 f.write(orjson.dumps(experiment_data))
