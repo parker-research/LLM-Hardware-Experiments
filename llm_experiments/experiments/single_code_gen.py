@@ -7,6 +7,11 @@ import orjson
 from loguru import logger
 import polars as pl
 
+from llm_experiments.logging.env_logging import (
+    get_all_env_info,
+    log_env_info,
+    write_env_info_to_json_file,
+)
 from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig
@@ -121,11 +126,29 @@ def do_experiment(
     return experiment_data
 
 
-def load_problems() -> list[SimpleCodeGenProblem]:
+def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
     git_root = get_path_to_git_repo_root()
+    verilog_eval_git_root = git_root.parent / "verilog-eval"
     verilog_eval_problems_path = (
-        git_root.parent / "verilog-eval" / "descriptions" / "VerilogDescription_Human.jsonl"
+        verilog_eval_git_root / "descriptions" / "VerilogDescription_Human.jsonl"
     )
+
+    if not verilog_eval_git_root.is_dir():
+        logger.info("Cloning the verilog-eval repo.")
+
+        # clone the repo
+        import git
+
+        repo = git.Repo.clone_from(
+            "https://github.com/NVlabs/verilog-eval",
+            to_path=verilog_eval_git_root,
+        )
+        logger.info(
+            f"Cloned the verilog-eval repo. "
+            f"Active branch: {repo.active_branch}. Latest commit: {repo.head.commit}"
+        )
+    else:
+        logger.info("verilog-eval repo already exists.")
 
     problems: list[SimpleCodeGenProblem] = []
     with open(verilog_eval_problems_path, "r") as f:
@@ -141,10 +164,26 @@ def load_problems() -> list[SimpleCodeGenProblem]:
 
 
 def run_experiment_all_inputs():
+    logger.info("Starting simple single code generation experiment.")
+
     experiment_group_start_timestamp = datetime.now()
     experiment_group_start_timestamp_str = get_file_date_str(
         experiment_group_start_timestamp, precision="datetime"
     )
+
+    # Data Setup
+    working_dir = make_data_dir(
+        f"simple_code_gen_experiment_{experiment_group_start_timestamp_str}",
+        append_date=False,
+    )
+
+    # Experiment Setup/Logging
+    logger.add(working_dir / "general_log.log")
+    logger.info(f"Bound general log to: {working_dir / 'general_log.log'}")
+    logger.info(f"Experiment group start timestamp: {experiment_group_start_timestamp}")
+    env_info = get_all_env_info()
+    log_env_info(env_info)
+    write_env_info_to_json_file(env_info, working_dir / "env_info.json")
 
     # Tool Setup
     iverilog_tool.install_and_init_tool()
@@ -168,14 +207,8 @@ def run_experiment_all_inputs():
         ),
     ]
 
-    # Data Setup
-    working_dir = make_data_dir(
-        f"simple_code_gen_experiment_{experiment_group_start_timestamp_str}",
-        append_date=False,
-    )
-
     # Problems
-    problems = load_problems()
+    problems = load_verilog_eval_problems()
     logger.info(f"Loaded {len(problems)} problems.")
 
     # experiment_space = itertools.product([llm_list, problems])

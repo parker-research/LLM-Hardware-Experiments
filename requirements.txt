@@ -20,6 +20,8 @@ pyyaml>=*
 gitpython>=*
 orjson>=*
 tqdm>=*
+torch>=*
+tensorflow>=*
 
 ############################
 # Large Language Models ####

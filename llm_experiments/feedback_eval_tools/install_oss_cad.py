@@ -37,6 +37,7 @@ def install_oss_cad() -> None:
     assert str(local_tgz_file).endswith(".tgz")
 
     if not local_tgz_file.is_file():
+        logger.info("Downloading OSS CAD suite...")
         _download_large_file(download_url, local_tgz_file)
         logger.info(
             f"Downloaded OSS CAD suite file: {local_tgz_file}"
