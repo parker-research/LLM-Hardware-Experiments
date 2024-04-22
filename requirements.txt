@@ -4,18 +4,29 @@
 #   1: pip install --upgrade pip wheel
 #   2: pip install -r requirements.txt
 
-
+############################
+# Installing Packages ######
+############################
 pip>=*
 wheel>=*
 
+############################
+# General Packages #########
+############################
 polars~=0.20.21
-
 requests>=*
 loguru>=*
 pyyaml>=*
 
-# dev tools
+############################
+# Large Language Models ####
+############################
+ollama~=0.1.8
+
+
+###################
+# Dev Tools #######
+###################
 pytest>=*
 flake8>=*
 black>=*
-

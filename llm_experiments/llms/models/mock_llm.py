@@ -13,6 +13,7 @@ class MockLlmConfig(LlmConfigBase):
 
     def __post_init__(self):
         self.llm_class = MockLlm
+        super().__post_init__()
 
     def validate_config(self) -> None:
         assert isinstance(self.does_respond_to_test_queries, bool)
@@ -28,18 +29,21 @@ class MockLlm(LlmBase):
         super().__init__(configured_llm_name, config)
 
     @classmethod
-    def validate_configuration(cls, config: LlmConfigBase):
+    def _validate_configuration(cls, config: LlmConfigBase):
         assert isinstance(config, LlmConfigBase)
         assert isinstance(config, MockLlmConfig)  # must be specifically THIS config class
         assert isinstance(config.does_respond_to_test_queries, bool)
 
-    def init_model(self):
-        pass
+    def init_model(self) -> None:
+        return None
+
+    def destroy_model(self) -> None:
+        return None
 
     def check_is_connectable(self) -> bool:
         return True
 
-    def query_llm(self, prompt: LlmPrompt) -> LlmResponse:
+    def query_llm_basic(self, prompt: LlmPrompt) -> LlmResponse:
         if self._get_regex_match_groups(
             r"Write.*(?P<number_of_sentences>\d+)\s*sentences.*ending.*apple",
             prompt.prompt_text,
@@ -62,6 +66,11 @@ class MockLlm(LlmBase):
             )
 
         return LlmResponse(response_text)
+
+    def query_llm_chat(
+        self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
+    ) -> LlmResponse:
+        self.query_llm_basic(prompt)
 
     @staticmethod
     def _get_regex_match_groups(regex: str, haystack: str) -> dict[str, str]:

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 import uuid
 
 # from loguru import logger
@@ -7,25 +7,36 @@ from llm_experiments.logging.text_terminal_logging import make_header_str
 
 
 class LlmPrompt:
-    def __init__(self, prompt_text: str):
+    role_literal_t = Literal["user", "system"]
+
+    def __init__(self, prompt_text: str, role: role_literal_t = "user"):
+        assert isinstance(
+            prompt_text, str
+        ), f"prompt_text must be a string, not {type(prompt_text)}"
+        assert role in ["user", "system"], f"role must be 'user' or 'system', not {role}"
+
         self.prompt_text = prompt_text
+        self.role = role
         self.uuid = uuid.uuid4()
 
     def __repr__(self) -> str:
         lines = [
-            make_header_str("Start Prompt", char=">"),
+            make_header_str(f"Start Prompt ({self.role.title()})", char=">"),
             self.prompt_text,
-            make_header_str("End Prompt", char=">"),
+            make_header_str(f"End Prompt ({self.role.title()})", char=">"),
         ]
         return "\n".join(lines)
 
 
 class LlmResponse:
-    def __init__(self, response_text: str):
+    def __init__(self, response_text: str, metadata: Optional[dict] = None):
         assert isinstance(
             response_text, str
         ), f"response_text must be a string, not {type(response_text)}"
         self.response_text = response_text
+        self.metadata = metadata
+
+        self.role = "assistant"  # currently, there's only one option
         self.uuid = uuid.uuid4()
 
     def __repr__(self) -> str:

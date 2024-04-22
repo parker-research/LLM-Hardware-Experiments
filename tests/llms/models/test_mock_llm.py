@@ -32,13 +32,13 @@ def test_check_is_connectable():
     assert llm.check_is_connectable()
 
 
-def test_query_llm():
+def test_query_llm_basic():
     llm = MockLlm(
         configured_llm_name="MockLlm_Test_1",
         config=MockLlmConfig(does_respond_to_test_queries=True),
     )
     prompt = LlmPrompt("Write me 10 sentences ending with the word 'apple'.")
-    response = llm.query_llm(prompt)
+    response = llm.query_llm_basic(prompt)
     assert response is not None
     assert isinstance(response, LlmResponse)
     assert response.response_text.startswith(
@@ -47,3 +47,19 @@ def test_query_llm():
     assert response.response_text.endswith(
         "This is sentence 9 ending with apple. This is sentence 10 ending with apple."
     )
+
+
+def test_built_in_tests__apple_test():
+    llm = MockLlm(
+        configured_llm_name="MockLlm_Test_1",
+        config=MockLlmConfig(does_respond_to_test_queries=True),
+    )
+    assert llm.perform_test_query("apple_test")
+
+
+def test_built_in_tests__count_to_10():
+    llm = MockLlm(
+        configured_llm_name="MockLlm_Test_1",
+        config=MockLlmConfig(does_respond_to_test_queries=True),
+    )
+    assert llm.perform_test_query("count_to_10")

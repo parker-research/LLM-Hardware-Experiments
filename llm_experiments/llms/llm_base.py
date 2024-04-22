@@ -11,7 +11,7 @@ class LlmBase(abc.ABC):
         self.configured_llm_name: str = configured_llm_name
         self.base_llm_name: str = self.__class__.__name__
 
-        self.validate_configuration(config)
+        self._validate_configuration(config)
         self.config: LlmConfigBase = config
 
     def __repr__(self) -> str:
@@ -19,12 +19,24 @@ class LlmBase(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def validate_configuration(cls, config: LlmConfigBase):
+    def _validate_configuration(cls, config: LlmConfigBase):
         """Check that the configuration options are valid. Raise an exception if not."""
         pass
 
     @abc.abstractmethod
-    def init_model(self):
+    def init_model(self) -> None:
+        """Prep the model for use right away.
+        May involve downloading the model's file, etc.
+        Method is stable, and can be called multiple times consecutively.
+        """
+        pass
+
+    @abc.abstractmethod
+    def destroy_model(self) -> None:
+        """Clean up the model when done with it.
+        May involve deleting the model's files, etc.
+        Method is stable, and can be called multiple times consecutively.
+        """
         pass
 
     @abc.abstractmethod
@@ -32,7 +44,13 @@ class LlmBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def query_llm(self, prompt: LlmPrompt) -> LlmResponse:
+    def query_llm_basic(self, prompt: LlmPrompt) -> LlmResponse:
+        pass
+
+    @abc.abstractmethod
+    def query_llm_chat(
+        self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
+    ) -> LlmResponse:
         pass
 
     def perform_test_query(self, test_query: Literal["apple_test", "count_to_10"]):
@@ -66,7 +84,7 @@ class LlmBase(abc.ABC):
         else:
             raise ValueError(f"Invalid test query: {test_query}")
 
-        response = self.query_llm(prompt)
+        response = self.query_llm_basic(prompt)
 
         response_passes_test = check_response(response)
         return response_passes_test
