@@ -27,10 +27,11 @@ def _get_system_environment_info() -> dict[str, dict[str, Any]]:
             "Python Path": sys.path,
             "Python Prefix": sys.prefix,
             "Python Exec Prefix": sys.exec_prefix,
-            "Python Version Info": sys.version_info,
-            "Python Build Info": sys.version_info,
+            "Python Version Info": list(sys.version_info),
+            "Python Build Info": sys.version,
         },
-        "Environment Variables": {key: value for key, value in os.environ.items()},
+        # TODO: consider adding back certain environment variables; too dangerous to log all though
+        # "Environment Variables": {key: value for key, value in os.environ.items()},
         "Process Info": {
             "Process ID": os.getpid(),
             "Parent Process ID": os.getppid(),
@@ -43,7 +44,7 @@ def _get_system_environment_info() -> dict[str, dict[str, Any]]:
         "Other Info": {
             "Current Local Time": datetime.now(),
             "Current UTC Time": datetime.now(timezone.utc),
-            "Timezone": datetime.now().astimezone().tzinfo,
+            "Timezone": str(datetime.now().astimezone().tzinfo),
             "Timezone Name": datetime.now().astimezone().tzname(),
         },
     }
@@ -58,25 +59,25 @@ def _get_gpu_env_info():
     try:
         import torch
 
+        try:
+            cuda_current_device = torch.cuda.current_device()
+        except RuntimeError:
+            cuda_current_device = "RuntimeError: No CUDA devices found."
+
         pytorch_info = {
-            "Using PyTorch version": torch.__version__,
-            "PyTorch CUDA available": torch.cuda.is_available(),
-            "PyTorch CUDA device count": torch.cuda.device_count(),
-            "PyTorch CUDA device name": (
-                torch.cuda.get_device_name(0)
-                if torch.cuda.device_count() > 0
-                else "No CUDA devices"
-            ),
-            "PyTorch CUDA device capability": (
-                torch.cuda.get_device_capability(0)
-                if torch.cuda.device_count() > 0
-                else "No CUDA devices"
-            ),
-            "PyTorch CUDA device memory": (
-                torch.cuda.get_device_properties(0)
-                if torch.cuda.device_count() > 0
-                else "No CUDA devices"
-            ),
+            "PyTorch Version": torch.__version__,
+            "PyTorch CUDA Is Available": torch.cuda.is_available(),
+            "PyTorch CUDA Device Count": torch.cuda.device_count(),
+            "PyTorch CUDA Current Device": cuda_current_device,
+            "PyTorch CUDA Devices": [
+                {
+                    "Device Number": cuda_dev_num,
+                    "Name": torch.cuda.get_device_name(cuda_dev_num),
+                    "Capability": torch.cuda.get_device_capability(cuda_dev_num),
+                    "Memory": torch.cuda.get_device_properties(cuda_dev_num),
+                }
+                for cuda_dev_num in range(torch.cuda.device_count())
+            ],
         }
         gpu_info["PyTorch GPU Info"] = pytorch_info
     except ImportError:
@@ -132,3 +133,12 @@ def write_env_info_to_json_file(env_info: dict[str, dict[str, Any]], json_file_p
 if __name__ == "__main__":
     env_info = get_all_env_info()
     log_env_info(env_info)
+
+    from llm_experiments.util.path_helpers import make_data_dir
+
+    working_dir = make_data_dir("testing", append_date=False)  # in <git_root>/working/testing
+    working_dir.mkdir(parents=True, exist_ok=True)
+    json_file_path = working_dir / "env_info.json"
+    write_env_info_to_json_file(env_info, json_file_path)
+
+    logger.info(f"Environment info written to {json_file_path}.")
