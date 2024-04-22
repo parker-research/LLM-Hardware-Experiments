@@ -73,8 +73,8 @@ def _get_gpu_env_info():
                 {
                     "Device Number": cuda_dev_num,
                     "Name": torch.cuda.get_device_name(cuda_dev_num),
-                    "Capability": torch.cuda.get_device_capability(cuda_dev_num),
-                    "Memory": torch.cuda.get_device_properties(cuda_dev_num),
+                    "Capability": str(torch.cuda.get_device_capability(cuda_dev_num)),
+                    "Device Properties": str(torch.cuda.get_device_properties(cuda_dev_num)),
                 }
                 for cuda_dev_num in range(torch.cuda.device_count())
             ],
@@ -89,10 +89,10 @@ def _get_gpu_env_info():
         import tensorflow as tf
 
         tensorflow_info = {
-            "Using TensorFlow version": tf.__version__,
-            "TensorFlow CUDA available": tf.test.is_built_with_cuda(),
+            "TensorFlow Version": tf.__version__,
+            "TensorFlow Built with CUDA": tf.test.is_built_with_cuda(),
             # "TensorFlow CUDA GPU available": tf.test.is_gpu_available(cuda_only=True), # dep
-            "TensorFlow CUDA GPU device list": tf.config.list_physical_devices("GPU"),
+            "TensorFlow CUDA GPU Devices": tf.config.list_physical_devices("GPU"),
         }
         gpu_info["TensorFlow GPU Info"] = tensorflow_info
     except ImportError:
