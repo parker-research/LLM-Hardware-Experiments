@@ -2,6 +2,9 @@
 ###### Project-Specific Ignores #############
 #############################################
 
+# Working Data Folders
+working/
+
 
 # Log and data output files
 *.parquet

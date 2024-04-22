@@ -21,7 +21,7 @@ class OllamaLlmConfig(LlmConfigBase):
     other_model_file_options: Optional[dict] = None
 
     def __post_init__(self):
-        self.llm_class = OllamaLlm
+        self.llm_class = "OllamaLlm"
         super().__post_init__()
 
     def validate_config(self) -> None:

@@ -17,6 +17,9 @@ polars~=0.20.21
 requests>=*
 loguru>=*
 pyyaml>=*
+gitpython>=*
+orjson>=*
+tqdm>=*
 
 ############################
 # Large Language Models ####

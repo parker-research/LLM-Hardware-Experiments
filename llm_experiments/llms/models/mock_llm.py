@@ -1,6 +1,7 @@
 import re
 import json
 from dataclasses import dataclass
+import time
 
 from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
@@ -12,7 +13,7 @@ class MockLlmConfig(LlmConfigBase):
     does_respond_to_test_queries: bool = True
 
     def __post_init__(self):
-        self.llm_class = MockLlm
+        self.llm_class = "MockLlm"
         super().__post_init__()
 
     def validate_config(self) -> None:
@@ -65,6 +66,9 @@ class MockLlm(LlmBase):
                 "The text I was given as input was:\n" + prompt.prompt_text
             )
 
+        # Gotta make it feel like an LLM
+        time.sleep(0.1)
+
         return LlmResponse(response_text)
 
     def query_llm_chat(
@@ -81,10 +85,10 @@ class MockLlm(LlmBase):
 
 
 solid_configs: dict[str, MockLlmConfig] = {
-    "mock_llm_which_passes_tests": MockLlmConfig(
+    "mock_llm_with_preprogrammed_responses": MockLlmConfig(
         does_respond_to_test_queries=True,
     ),
-    "mock_llm_which_fails_tests": MockLlmConfig(
+    "mock_llm_no_preprogrammed_responses": MockLlmConfig(
         does_respond_to_test_queries=False,
     ),
 }

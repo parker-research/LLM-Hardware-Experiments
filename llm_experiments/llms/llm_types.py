@@ -4,6 +4,7 @@ import uuid
 # from loguru import logger
 
 from llm_experiments.logging.text_terminal_logging import make_header_str
+from llm_experiments.intermediate_steps.extract_verilog import extract_verilog_module_from_text
 
 
 class LlmPrompt:
@@ -46,6 +47,12 @@ class LlmResponse:
             make_header_str("End Response", char="<"),
         ]
         return "\n".join(lines)
+
+    def extract_code(self, code_type: Literal["verilog_module"]) -> str | None:
+        if code_type == "verilog_module":
+            return extract_verilog_module_from_text(self.response_text)
+        else:
+            raise ValueError(f"Unknown code type: {code_type}")
 
 
 class LlmQuery:

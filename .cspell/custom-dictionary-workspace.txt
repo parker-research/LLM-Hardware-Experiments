@@ -1,5 +1,10 @@
 # Custom Dictionary Words
+endmodule
+Iverilog
 llms
 loguru
 Ollama
+orjson
 tinyllama
+Verilator
+Verilog

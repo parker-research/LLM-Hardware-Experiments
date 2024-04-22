@@ -14,8 +14,11 @@ class MockFeedbackEvalTool(FeedbackEvalToolBase):
         if "mock_option" in config:
             assert isinstance(config["mock_option"], str)
 
-    def check_is_connectable(self):
-        return True
+    def install_and_init_tool(self) -> None:
+        pass
+
+    def assert_is_usable(self) -> None:
+        return None
 
     def evaluate(self, evaluation_info: dict) -> float:
         # FIXME: doesn't really make sense
