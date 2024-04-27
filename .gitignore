@@ -4,6 +4,8 @@
 
 # Working Data Folders
 working/
+secrets.yaml
+
 
 
 # Log and data output files

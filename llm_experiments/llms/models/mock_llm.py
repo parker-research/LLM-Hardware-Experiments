@@ -8,7 +8,7 @@ from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
 
-@dataclass
+@dataclass(kw_only=True)
 class MockLlmConfig(LlmConfigBase):
     does_respond_to_test_queries: bool = True
 

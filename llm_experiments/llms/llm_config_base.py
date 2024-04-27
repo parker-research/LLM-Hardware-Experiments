@@ -4,9 +4,10 @@ import json
 import yaml
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LlmConfigBase(abc.ABC):
-    # add configuration dataclass variables go in child classes
+    # most configuration dataclass variables go in child classes
+    is_stable: bool = False  # indicates that the same input will always produce the same output
 
     def __post_init__(self):
         self.validate_config()

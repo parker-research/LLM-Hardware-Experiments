@@ -11,7 +11,7 @@ from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
 
-@dataclass
+@dataclass(kw_only=True)
 class OllamaLlmConfig(LlmConfigBase):
     # model_name comes from the list here:
     model_name: str
@@ -45,11 +45,6 @@ class OllamaLlmConfig(LlmConfigBase):
 
 
 class OllamaLlm(LlmBase):
-    """A mock LLM that responds to test queries and provides a simple response to other queries.
-    This LLM is implemented exactly as all real LLMs are: using complex chains of if-statements
-        and regular expressions. /j
-    """
-
     def __init__(self, configured_llm_name: str, config: LlmConfigBase):
         super().__init__(configured_llm_name, config)
 

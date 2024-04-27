@@ -5,6 +5,7 @@ llms
 loguru
 ndjson
 Ollama
+openai
 orjson
 testbench
 tinyllama

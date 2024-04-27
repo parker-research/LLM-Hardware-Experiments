@@ -2,11 +2,12 @@ import subprocess
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Optional
 
 # Tools for executing external CLI tools (e.g., verilator, iverilog, etc.).
 
 
-@dataclass
+@dataclass(kw_only=True)
 class CommandResult:
     """The result of running a command."""
 
@@ -14,7 +15,7 @@ class CommandResult:
     stderr: str
     return_code: int
     execution_duration: timedelta
-    other_info: dict = None
+    other_info: Optional[dict] = None
 
 
 def run_command(command: list[str | Path]) -> CommandResult:

@@ -1,7 +1,9 @@
 from typing import Optional, Literal
 from pathlib import Path
-import git
 from datetime import datetime
+
+import git
+import yaml
 
 
 def get_path_to_git_repo_root() -> Path:
@@ -42,3 +44,14 @@ def make_data_dir(name: str, append_date: bool = True) -> Path:
 
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
+
+
+def read_secrets_file(secrets_file_path: Optional[Path] = None) -> dict:
+    """Loads the "<repo_root>/secrets.yaml" file and returns the contents as a dict.
+    The secrets_file_path argument can be used to specify a different file path, esp. for testing.
+    """
+    if secrets_file_path is None:
+        secrets_file_path: Path = get_path_to_git_repo_root() / "secrets.yaml"
+    with open(secrets_file_path, "r") as f:
+        secrets = yaml.safe_load(f)
+    return secrets

@@ -27,7 +27,7 @@ from llm_experiments.feedback_eval_tools.tools.iverilog_tool import IverilogTool
 iverilog_tool = IverilogTool("iverilog", config={})
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SimpleCodeGenProblem:
     """A simple code generation problem."""
 
