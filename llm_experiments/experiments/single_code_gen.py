@@ -22,7 +22,7 @@ from llm_experiments.util.path_helpers import (
     get_path_to_git_repo_root,
     get_file_date_str,
 )
-from llm_experiments.feedback_eval_tools.tools.iverilog_tool import IverilogTool
+from llm_experiments.feedback_eval_tools.tools.iverilog_tool import IverilogTool, CommandResult
 
 iverilog_tool = IverilogTool("iverilog", config={})
 
@@ -71,41 +71,12 @@ def do_experiment(
     )
     llm_response: LlmResponse = llm.query_llm_basic(LlmPrompt(llm_prompt_text))
 
-    # Step 2: Extract the generated code
-    generated_code: str | None = llm_response.extract_code("verilog_module")
+    # Prep the return data
+    verilog_save_dir = (
+        working_dir / "verilog" / f"{problem.problem_id}_{experiment_execution_uuid}"
+    )
+    verilog_save_dir.mkdir(parents=True, exist_ok=False)
 
-    if generated_code is not None:
-        # Step 3: Save the generated code to a file
-        verilog_save_dir = (
-            working_dir / "verilog" / f"{problem.problem_id}_{experiment_execution_uuid}"
-        )
-        verilog_save_dir.mkdir(parents=True, exist_ok=False)
-
-        verilog_file_path = verilog_save_dir / "generated_code.v"
-        verilog_file_path.write_text(generated_code)
-
-        # Step 4: Run the code through IVerilog to check if it builds
-        vvp_file_path = verilog_save_dir / "compiled.vvp"
-        compile_result = iverilog_tool.run_iverilog_compile_command(
-            verilog_file_list=[verilog_file_path],  # TODO: add a test bench path here
-            output_vvp_file_path=vvp_file_path,
-        )
-
-        # Step 5: Run the code through IVerilog's vvp to run it, with the test bench
-        # execute_result = iverilog_tool.run_iverilog_vvp_execute_command(vvp_file_path)
-        # TODO: run this part, with the test bench
-
-        was_compile_success = compile_result.return_code == 0
-    else:
-        verilog_save_dir = None
-        vvp_file_path = None
-        compile_result = None
-        was_compile_success = None
-
-    # Step 6: Collect data on the results
-    # TODO: consider refactoring to the top, and setting values to None if they're not available
-    #  (which would allow for an easy early return)
-    # Put it in a TypedDict, and make a `from_llm_and_prompt()` method.
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
@@ -116,15 +87,58 @@ def do_experiment(
         "problem_prompt": problem.problem_prompt,
         "llm_response": llm_response.response_text,
         "llm_response_metadata": orjson.dumps(llm_response.metadata).decode("utf-8"),
-        "extracted_generated_code": generated_code,
         "verilog_save_dir": str(verilog_save_dir),
-        "iverilog_compile_result_return_code": (
-            compile_result.return_code if compile_result else None
-        ),
-        "iverilog_compile_result_stdout": compile_result.stdout if compile_result else None,
-        "iverilog_compile_result_stderr": compile_result.stderr if compile_result else None,
-        "was_compile_success": was_compile_success,
+        "extracted_generated_code": None,
+        "iverilog_compile_result_return_code": None,
+        "iverilog_compile_result_stdout": None,
+        "iverilog_compile_result_stderr": None,
+        "was_compile_success": None,
+        "iverilog_execute_result_return_code": None,
+        "iverilog_execute_result_stdout": None,
+        "iverilog_execute_result_stderr": None,
+        "exit_stage": "end",
     }
+
+    # Step 2: Extract the generated code
+    generated_code: str | None = llm_response.extract_code("verilog_module")
+    experiment_data["extracted_generated_code"] = generated_code
+
+    # Step 3: Save the generated code to a file
+
+    verilog_file_path = verilog_save_dir / "generated_code.v"
+    verilog_file_path.write_text(generated_code)
+
+    # Step 4: Run the code through IVerilog to check if it builds
+    vvp_file_path = verilog_save_dir / "compiled.vvp"
+    compile_result: CommandResult = iverilog_tool.run_iverilog_compile_command(
+        verilog_file_list=[verilog_file_path],  # TODO: add a test bench path here
+        output_vvp_file_path=vvp_file_path,
+    )
+    experiment_data.update(
+        {
+            "iverilog_compile_result_return_code": (compile_result.return_code),
+            "iverilog_compile_result_stdout": (compile_result.stdout),
+            "iverilog_compile_result_stderr": (compile_result.stderr),
+            "was_compile_success": (compile_result.return_code == 0),
+        }
+    )
+    if compile_result.return_code != 0:
+        experiment_data["exit_stage"] = "iverilog_compile_error"
+        return experiment_data
+
+    # Step 5: Run the code through IVerilog's vvp to run it, with the test bench
+    execute_result = iverilog_tool.run_iverilog_vvp_execute_command(vvp_file_path)
+    experiment_data.update(
+        {
+            "iverilog_execute_result_return_code": (execute_result.return_code),
+            "iverilog_execute_result_stdout": (execute_result.stdout),
+            "iverilog_execute_result_stderr": (execute_result.stderr),
+        }
+    )
+    if execute_result.return_code != 0:
+        experiment_data["exit_stage"] = "iverilog_execute_error"
+        return experiment_data
+
     return experiment_data
 
 

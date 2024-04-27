@@ -22,7 +22,7 @@ class FeedbackEvalToolBase(abc.ABC):
         self.config: dict = config
 
     def __repr__(self) -> str:
-        return f"{self.base_tool_name}, acting as {self.configured_tool_name} ({self.config})"
+        return f"{self.base_tool_name}[{self.configured_tool_name}]"
 
     @classmethod
     @abc.abstractmethod

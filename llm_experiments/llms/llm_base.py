@@ -15,7 +15,7 @@ class LlmBase(abc.ABC):
         self.config: LlmConfigBase = config
 
     def __repr__(self) -> str:
-        return f"{self.base_llm_name}, acting as {self.configured_llm_name} ({self.config})"
+        return f"{self.base_llm_name}[{self.configured_llm_name}]"
 
     @classmethod
     @abc.abstractmethod

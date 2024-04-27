@@ -6,6 +6,7 @@ loguru
 ndjson
 Ollama
 orjson
+testbench
 tinyllama
 tqdm
 Verilator

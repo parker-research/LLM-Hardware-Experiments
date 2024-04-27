@@ -54,13 +54,42 @@ class IverilogTool(FeedbackEvalToolBase):
         result = run_command(execute_command)
         return result
 
+    def run_iverilog_compile_and_execute_commands(
+        self, verilog_file_list: list[Path], output_vvp_file_path: Path
+    ) -> dict:
+        """Runs the IVerilog compile and IVerilog vvp (execute) commands.
+        Returns a dict with keys:
+            'compile_result': CommandResult
+            'execute_result': CommandResult
+            'status': Literal["success", "compile_error", "execute_error"]
+        """
+        result = {
+            "compile_result": None,
+            "execute_result": None,
+            "status": "success",
+        }
+        result["compile_result"] = self.run_iverilog_compile_command(
+            verilog_file_list, output_vvp_file_path
+        )
+        if result["compile_result"].return_code != 0:
+            result["status"] = "compile_error"
+            return result
+
+        result["execute_result"] = self.run_iverilog_vvp_execute_command(output_vvp_file_path)
+        if result["execute_result"].return_code != 0:
+            result["status"] = "execute_error"
+            return result
+
+        # TODO: check testbench output
+        return result
+
     def get_iverilog_version(self) -> list[dict[str, str]]:
         """Get the version of IVerilog."""
         result = run_command(["iverilog", "-V"])
         return self._extract_iverilog_version(result.stdout)
 
     @staticmethod
-    def _extract_iverilog_version(version_command_stdout) -> list[dict[str, str]]:
+    def _extract_iverilog_version(version_command_stdout: str) -> list[dict[str, str]]:
         matches = re.finditer(
             (
                 r"^\s*(?P<tool_name>.*Icarus.+?)\s+([vV]ersion\s+)?"

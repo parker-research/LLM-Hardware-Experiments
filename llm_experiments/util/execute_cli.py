@@ -14,10 +14,11 @@ class CommandResult:
     stderr: str
     return_code: int
     execution_duration: timedelta
+    other_info: dict = None
 
 
 def run_command(command: list[str | Path]) -> CommandResult:
-    """Run an IVerilog command and return the output.
+    """Run a command (e.g., iverilog) and return the output.
     Do not include the 'iverilog' command itself in the command list.
     """
 
