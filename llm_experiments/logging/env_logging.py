@@ -119,11 +119,37 @@ def _get_gpu_env_info() -> dict:
     return gpu_info
 
 
+def _get_slurm_env_info() -> dict:
+    # Define the SLURM environment variables and their human-readable equivalents
+    slurm_vars = {
+        "SLURM_JOB_ID": "SLURM Job ID",
+        "SLURM_JOB_NAME": "SLURM Job Name",
+        "SLURM_JOB_NODELIST": "SLURM Node List",
+        "SLURM_JOB_NUM_NODES": "Number of Nodes",
+        "SLURM_CPUS_ON_NODE": "CPUs on Node",
+        "SLURM_JOB_CPUS_PER_NODE": "CPUs per Node",
+        "SLURM_SUBMIT_DIR": "Job Submission Directory",
+        "SLURM_SUBMIT_HOST": "Submission Host",
+        "SLURM_JOB_PARTITION": "SLURM Partition",
+    }
+
+    # Retrieve environment variables
+    metadata = {}
+    for var, readable_name in slurm_vars.items():
+        metadata[readable_name] = os.getenv(var, None)
+
+    return metadata
+
+
 def get_all_env_info() -> dict[str, dict[str, Any]]:
     env_info = _get_system_environment_info()
     gpu_info = _get_gpu_env_info()
-
     env_info.update(gpu_info)
+
+    # TODO: tool versioning info (Iverilog/OSSCAD, PyPI packages, etc.)
+
+    env_info["SLURM Info"] = _get_slurm_env_info()
+
     return env_info
 
 
