@@ -167,7 +167,7 @@ def _convert_chat_history_to_ollama_api_dict(
     return messages_query
 
 
-solid_configs: dict[str, OllamaLlmConfig] = {
+ollama_good_configs: dict[str, OllamaLlmConfig] = {
     "tinyllama_no_randomness": OllamaLlmConfig(
         model_name="tinyllama:1.1b",
         option_seed=9865,  # any fixed number is good

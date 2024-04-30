@@ -90,7 +90,7 @@ class MockLlm(LlmBase):
         return match.groupdict()
 
 
-solid_configs: dict[str, MockLlmConfig] = {
+mock_llm_good_configs: dict[str, MockLlmConfig] = {
     "mock_llm_with_preprogrammed_responses": MockLlmConfig(
         does_respond_to_test_queries=True,
     ),

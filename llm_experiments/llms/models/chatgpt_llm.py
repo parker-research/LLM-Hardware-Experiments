@@ -93,7 +93,7 @@ class ChatGptLlm(LlmBase):
 
         llm_response = LlmResponse(
             response_text=resp_text,
-            metadata=resp_metadata,
+            metadata=dict(resp_metadata),
         )
         return llm_response
 
@@ -122,8 +122,23 @@ def _convert_chat_history_to_openai_api_dict(
     return messages_query
 
 
-solid_configs: dict[str, ChatGptLlmConfig] = {
-    "gpt-3.5-turbo": ChatGptLlmConfig(
+chatgpt_good_configs: dict[str, ChatGptLlmConfig] = {
+    "gpt-3.5-turbo-default": ChatGptLlmConfig(
         model_name="gpt-3.5-turbo",
+    ),
+    "gpt-3.5-turbo-no_randomness": ChatGptLlmConfig(
+        # is_stable=True,
+        model_name="gpt-3.5-turbo",
+        option_seed=101,  # any fixed number is good
+        option_temperature=0,
+    ),
+    "gpt-4-default": ChatGptLlmConfig(
+        model_name="gpt-4",
+    ),
+    "gpt-4-no_randomness": ChatGptLlmConfig(
+        # is_stable=True,
+        model_name="gpt-4",
+        option_seed=101,  # any fixed number is good
+        option_temperature=0,
     ),
 }

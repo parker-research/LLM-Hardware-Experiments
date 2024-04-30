@@ -46,7 +46,19 @@ from llm_experiments.experiments.common.verilog_eval_problems import load_verilo
 from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig
-from llm_experiments.llms.models.ollama_llm import OllamaLlm, solid_configs  # OllamaLlmConfig
+
+# LLM Models
+from llm_experiments.llms.models.ollama_llm import (  # noqa
+    OllamaLlm,
+    OllamaLlmConfig,
+    ollama_good_configs,
+)
+from llm_experiments.llms.models.chatgpt_llm import (  # noqa
+    ChatGptLlm,
+    ChatGptLlmConfig,
+    chatgpt_good_configs,
+)
+from llm_experiments.llms.other.ollama_server import ollama_server_singleton
 
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
@@ -191,7 +203,7 @@ def do_experiment(
             logger.info(f"Testbench passed: {mismatch_sample_count=}, {total_sample_count=}")
             experiment_data["exit_stage"] = "tb_pass"
         else:
-            logger.warning(f"Testbench failed: {mismatch_sample_count=}, {total_sample_count=}")
+            logger.info(f"Testbench failed: {mismatch_sample_count=}, {total_sample_count=}")
             experiment_data["exit_stage"] = "tb_fail"
     else:
         logger.warning("Could not find mismatched sample count in testbench output.")
@@ -216,6 +228,7 @@ def run_experiment_all_inputs():
         append_date=False,
     )
     logger.info(f"Working directory: {working_dir}")
+    ollama_server_singleton.set_log_file_path(working_dir / "ollama_serve.log")
 
     # Experiment Setup/Logging
     logger.add(working_dir / "general_log.log")
@@ -244,6 +257,7 @@ def run_experiment_all_inputs():
     experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
 
     # LLM Setup
+    # TODO: move this into a config file
     llm_list: list[LlmBase] = [
         MockLlm(
             "mock_llm_no_preprogrammed_responses",
@@ -251,13 +265,17 @@ def run_experiment_all_inputs():
                 does_respond_to_test_queries=False,
             ),
         ),
+        # ChatGptLlm(
+        #     "gpt-3.5-turbo-no_randomness",
+        #     config=chatgpt_good_configs["gpt-3.5-turbo-no_randomness"],
+        # ),
         OllamaLlm(
             "llama2_7b_no_randomness",
-            config=solid_configs["llama2_7b_no_randomness"],
+            config=ollama_good_configs["llama2_7b_no_randomness"],
         ),
         OllamaLlm(
             "tinyllama_no_randomness",
-            config=solid_configs["tinyllama_no_randomness"],
+            config=ollama_good_configs["tinyllama_no_randomness"],
         ),
     ]
 
@@ -311,7 +329,8 @@ def run_experiment_all_inputs():
                     "was_testbench_passed",
                 ],
             )
-            logger.info(f"Done experiment. {experiment_data_short}")
+            summary_emoji = "✅" if experiment_data["was_testbench_passed"] else "😿"
+            logger.info(f"{summary_emoji} Done experiment. {experiment_data_short}")
 
             with open(experiment_data_jsonl_path, "ab") as f:
                 f.write(orjson.dumps(experiment_data))
@@ -328,7 +347,13 @@ def run_experiment_all_inputs():
         df.write_parquet(working_dir / "experiment_data.parquet")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
-        df_stats_1 = df.group_by(["exit_stage"]).agg(count=pl.len())
+        df_stats_1 = (
+            df.group_by(["base_llm_name", "configured_llm_name", "exit_stage"])
+            .agg(
+                count=pl.len(),
+            )
+            .sort()
+        )
         logger.info(f"Experiment data stats (by exit_stage): {df_stats_1}")
     else:
         logger.warning("No .jsonl file. Appears that all experiments were skipped.")

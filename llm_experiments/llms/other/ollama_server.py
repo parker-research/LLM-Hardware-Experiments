@@ -4,6 +4,7 @@ import signal
 import re
 from datetime import datetime
 import time
+from pathlib import Path
 
 from loguru import logger
 
@@ -13,8 +14,9 @@ from llm_experiments.util.execute_cli import run_command
 
 
 class OllamaServer:
-    def __init__(self):
+    def __init__(self, log_file_path: Path | None = None):
         self.process = None
+        self.log_file_path = log_file_path
 
         self._ollama_executable_path = (
             make_data_dir(f"tools/ollama/ollama_{datetime.now().date()}", append_date=False)
@@ -27,6 +29,9 @@ class OllamaServer:
         # OLLAMA_MODELS       The path to the models directory (default is "~/.ollama/models")
         # OLLAMA_KEEP_ALIVE   The duration that models stay loaded in memory (default is "5m")
 
+    def set_log_file_path(self, log_file_path: Path) -> None:
+        self.log_file_path = log_file_path
+
     def start(self):
         """Starts the ollama serve command in the background."""
         if self.process:
@@ -36,9 +41,11 @@ class OllamaServer:
         self._download_ollama()
 
         # Using subprocess.Popen to execute the command in the background
-        self.log_file_path = (
-            make_data_dir("ollama_server_logs") / f"ollama_serve_{get_file_date_str()}.log"
-        )
+        if self.log_file_path is None:
+            self.log_file_path = (
+                make_data_dir("orphan_experiment/ollama_server_logs", append_date=False)
+                / f"ollama_serve_{get_file_date_str()}.log"
+            )
         self._log_file_pointer = self.log_file_path.open("w")
         self.process = subprocess.Popen(
             [str(self._ollama_executable_path), "serve"],

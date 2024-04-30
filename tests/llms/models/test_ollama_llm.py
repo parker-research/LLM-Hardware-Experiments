@@ -2,7 +2,7 @@ from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.llms.models.ollama_llm import (
     OllamaLlmConfig,
     OllamaLlm,
-    solid_configs,
+    ollama_good_configs,
     _convert_chat_history_to_ollama_api_dict,
 )
 
@@ -19,14 +19,14 @@ def test_construction_1():
 
 
 def test_ollama_init_model():
-    config = solid_configs["tinyllama_no_randomness"]
+    config = ollama_good_configs["tinyllama_no_randomness"]
     llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
     x = llm.init_model()
     assert x is None
 
 
 def test_query_llm_basic():
-    config = solid_configs["tinyllama_no_randomness"]
+    config = ollama_good_configs["tinyllama_no_randomness"]
     llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
     llm.init_model()
 
@@ -38,7 +38,7 @@ def test_query_llm_basic():
 
 
 def test_query_llm_basic_response_is_stable():
-    config = solid_configs["tinyllama_no_randomness"]
+    config = ollama_good_configs["tinyllama_no_randomness"]
     llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
     llm.init_model()
 
@@ -56,7 +56,7 @@ def test_query_llm_basic_response_is_stable():
 
 def test_query_llm_chat():
     # NOTE: this test doesn't work with tinyllama_no_randomness
-    config = solid_configs["llama2_7b_no_randomness"]
+    config = ollama_good_configs["llama2_7b_no_randomness"]
     llm = OllamaLlm(configured_llm_name="llama2_7b_no_randomness", config=config)
     llm.init_model()
 
@@ -92,7 +92,7 @@ def test_query_llm_chat__isolation():
     Chat chain "A" should not affect chat chain "B".
     """
     # NOTE: this test doesn't work with tinyllama_no_randomness
-    config = solid_configs["llama2_7b_no_randomness"]
+    config = ollama_good_configs["llama2_7b_no_randomness"]
     llm = OllamaLlm(configured_llm_name="llama2_7b_no_randomness", config=config)
     llm.init_model()
 
