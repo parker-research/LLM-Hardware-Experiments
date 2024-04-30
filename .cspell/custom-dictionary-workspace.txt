@@ -7,8 +7,11 @@ ndjson
 Ollama
 openai
 orjson
+systemverilog
 testbench
+testbenches
 tinyllama
 tqdm
 Verilator
 Verilog
+vhdl

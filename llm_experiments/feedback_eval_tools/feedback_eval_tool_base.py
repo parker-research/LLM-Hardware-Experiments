@@ -14,21 +14,12 @@ class FeedbackEvalToolBase(abc.ABC):
         - Other synthesis tools
     """
 
-    def __init__(self, configured_tool_name: str, config: dict = {}):
+    def __init__(self, configured_tool_name: str):
+        self.base_tool_name: str = self.__class__.__name__  # IverilogTool
         self.configured_tool_name: str = configured_tool_name
-        self.base_tool_name: str = self.__class__.__name__
-
-        self.validate_configuration(config)
-        self.config: dict = config
 
     def __repr__(self) -> str:
         return f"{self.base_tool_name}[{self.configured_tool_name}]"
-
-    @classmethod
-    @abc.abstractmethod
-    def validate_configuration(cls, config: dict):
-        """Check that the configuration options are valid. Raise an exception if not."""
-        pass
 
     @abc.abstractmethod
     def install_and_init_tool(self) -> None:

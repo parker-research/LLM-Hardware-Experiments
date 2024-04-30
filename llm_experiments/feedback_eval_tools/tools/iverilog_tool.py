@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from pathlib import Path
 import re
+from typing import Literal
 
 from llm_experiments.feedback_eval_tools.feedback_eval_tool_base import (
     FeedbackEvalToolBase,
@@ -8,15 +10,34 @@ from llm_experiments.util.execute_cli import run_command, CommandResult
 from llm_experiments.feedback_eval_tools.install_oss_cad import install_oss_cad
 
 
+@dataclass(kw_only=True)
+class IverilogToolConfig:
+    syntax_version: Literal["sv2012"] = "sv2012"  # TODO: maybe add support for others
+    show_warnings: bool = True
+
+    def to_command_args(self) -> list[str]:
+        args = []
+
+        if self.syntax_version == "sv2012":
+            args.append("-g2012")
+        else:
+            raise ValueError(f"Unsupported syntax version: {self.syntax_version}")
+
+        if self.show_warnings:
+            args.append("-Wall")
+        return args
+
+
 class IverilogTool(FeedbackEvalToolBase):
     """Implementation of access to the IVerilog tool."""
 
-    def __init__(self, configured_tool_name: str, config: dict = {}):
-        super().__init__(configured_tool_name, config)
-
-    @classmethod
-    def validate_configuration(cls, config: dict):
-        assert isinstance(config, dict)
+    def __init__(
+        self,
+        configured_tool_name: str = "IVerilog_SV2012_Default",
+        config: IverilogToolConfig = IverilogToolConfig(),
+    ):
+        super().__init__(configured_tool_name)
+        self.config: IverilogToolConfig = config
 
     def install_and_init_tool(self) -> None:
         install_oss_cad()
@@ -36,16 +57,23 @@ class IverilogTool(FeedbackEvalToolBase):
 
     def evaluate(self, evaluation_info: dict) -> float:
         # FIXME: doesn't really make sense
+        raise NotImplementedError
         return 0.5
 
     def evaluate_query(self, query: dict) -> dict:
-        # FIXME: doesn't really make sense
+        # FIXME: come up with a reasonable way to implement this
+        raise NotImplementedError
         return {"response": "mock response"}
 
     def run_iverilog_compile_command(
         self, verilog_file_list: list[Path], output_vvp_file_path: Path
     ) -> CommandResult:
-        compile_command = ["iverilog", "-o", str(output_vvp_file_path)] + verilog_file_list
+        compile_command = (
+            ["iverilog"]
+            + self.config.to_command_args()
+            + ["-o", str(output_vvp_file_path)]
+            + verilog_file_list
+        )
         result = run_command(compile_command)
         return result
 

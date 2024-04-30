@@ -12,9 +12,23 @@
         "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
+            "source.organizeImports": "always"
+        },
+        "editor.rulers": [
+            99
+        ],
     },
+
+    // line lengths, flake8/black config
+    "flake8.args": [
+        "--max-line-length=99",
+        "--ignore=W503", // line break before binary operator (black default)
+    ],
+    "black-formatter.args": [
+        "--line-length=99"
+    ],
+    "black-formatter.importStrategy": "fromEnvironment",
+    "flake8.importStrategy": "fromEnvironment",
 
     "python.analysis.extraPaths": ["./"],
     "python.autoComplete.extraPaths": ["./"],
@@ -29,13 +43,14 @@
         "**/__pycache__/": true,
         "**/.pytest_cache/": true
     },
-    "editor.rulers": [
-        99
-    ],
-    "flake8.args": [
-        "--max-line-length=99"
-    ],
-    "black-formatter.args": [
-        "--line-length=99"
-    ]
+
+    "[plaintext]": {
+        "editor.wordWrap": "on",
+        // "editor.wordWrapColumn": 99
+    },
+
+    "[json]": {
+        "editor.wordWrap": "off",
+    }
+
 }

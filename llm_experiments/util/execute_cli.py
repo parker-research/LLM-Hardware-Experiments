@@ -16,6 +16,27 @@ class CommandResult:
     return_code: int
     execution_duration: timedelta
     other_info: Optional[dict] = None
+    command_step_name: Optional[str] = None  # like "{self.command_step_name}" or "execute"
+
+    def write_to_files(self, folder_path: Path) -> None:
+        """Write the stdout and stderr to files in the specified folder."""
+        assert self.command_step_name is not None, "command_step_name must be set to write files"
+        folder_path.mkdir(parents=True, exist_ok=True)
+        (
+            folder_path / f"cmd_{self.command_step_name}_stdout_ret{self.return_code}.txt"
+        ).write_text(self.stdout)
+        (
+            folder_path / f"cmd_{self.command_step_name}_stderr_ret{self.return_code}.txt"
+        ).write_text(self.stderr)
+
+    def as_update_dict(self) -> dict:
+        assert self.command_step_name is not None, "command_step_name must be set"
+        return {
+            f"{self.command_step_name}_result_return_code": (self.return_code),
+            f"{self.command_step_name}_result_stdout": (self.stdout),
+            f"{self.command_step_name}_result_stderr": (self.stderr),
+            f"was_{self.command_step_name}_success": (self.return_code == 0),
+        }
 
 
 def run_command(command: list[str | Path]) -> CommandResult:

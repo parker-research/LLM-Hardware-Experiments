@@ -1,5 +1,4 @@
 from pathlib import Path
-from dataclasses import dataclass
 import uuid
 from datetime import datetime
 import traceback
@@ -22,23 +21,14 @@ from llm_experiments.util.path_helpers import (
     get_path_to_git_repo_root,
     get_file_date_str,
 )
-from llm_experiments.feedback_eval_tools.tools.iverilog_tool import IverilogTool, CommandResult
+from llm_experiments.feedback_eval_tools.tools.iverilog_tool import (
+    IverilogTool,
+    IverilogToolConfig,
+)
+from llm_experiments.util.execute_cli import CommandResult
+from llm_experiments.experiments.common.simple_code_gen_problem import SimpleCodeGenProblem
 
-iverilog_tool = IverilogTool("iverilog", config={})
-
-
-@dataclass(kw_only=True)
-class SimpleCodeGenProblem:
-    """A simple code generation problem."""
-
-    problem_id: str
-    problem_prompt: str
-
-    def __repr__(self) -> str:
-        return f"SimpleCodeGenProblem({self.problem_id})"
-
-    def __str__(self) -> str:
-        return f"SimpleCodeGenProblem({self.problem_id})"
+iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
 
 def do_experiment(
@@ -67,7 +57,7 @@ def do_experiment(
         "Wrap your code in Markdown code blocks. "
         "Do not write anything extraneous to the Verilog solution. "
         "Your solution should be a Verilog module that meets the following requirements: "
-        f"{problem.problem_prompt}"
+        f"{problem.problem_description}"
     )
     llm_response: LlmResponse = llm.query_llm_basic(LlmPrompt(llm_prompt_text))
 
@@ -84,7 +74,7 @@ def do_experiment(
         "configured_llm_name": llm.configured_llm_name,
         "llm_configuration": orjson.dumps(llm.config.to_dict()).decode("utf-8"),
         "problem_id": problem.problem_id,
-        "problem_prompt": problem.problem_prompt,
+        "problem_description": problem.problem_description,
         "llm_response": llm_response.response_text,
         "llm_response_metadata": orjson.dumps(llm_response.metadata).decode("utf-8"),
         "verilog_save_dir": str(verilog_save_dir),
@@ -172,7 +162,7 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
             problem_dict = orjson.loads(line)
             problem = SimpleCodeGenProblem(
                 problem_id="verilog_eval__" + problem_dict["task_id"],
-                problem_prompt=problem_dict["detail_description"],
+                problem_description=problem_dict["detail_description"],
             )
             problems.append(problem)
 
