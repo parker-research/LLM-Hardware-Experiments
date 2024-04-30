@@ -17,6 +17,7 @@ from pathlib import Path
 import uuid
 from datetime import datetime
 import traceback
+import re
 
 import orjson
 from loguru import logger
@@ -79,6 +80,7 @@ def do_experiment(
         "execute_result_stderr": None,
         "was_execute_success": None,
         "was_testbench_passed": None,  # True means passed, False means failed
+        "testbench_stats": None,
         "exit_stage": "end",
     }
 
@@ -115,7 +117,34 @@ def do_experiment(
         experiment_data["exit_stage"] = "iverilog_execute_error"
         return experiment_data
 
-    # TODO: check testbench success, and set experiment_data["was_testbench_passed"]
+    # Step 6: Check testbench success, and set experiment_data["was_testbench_passed"]
+    # TODO: decide if there's a better place for this assessment
+    # Find "Hint: Total mismatched samples is 0 out of 439 samples"
+    tb_match = re.search(
+        r"Total mismatched samples is (?P<mismatch_sample_count>\d+) out of (?P<total_sample_count>\d+) samples",  # noqa
+        execute_result.stdout,
+        re.IGNORECASE,
+    )
+    if tb_match:
+        mismatch_sample_count = int(tb_match.group("mismatch_sample_count"))
+        total_sample_count = int(tb_match.group("total_sample_count"))
+        experiment_data["testbench_stats"] = orjson.dumps(
+            {
+                "mismatch_sample_count": mismatch_sample_count,
+                "total_sample_count": total_sample_count,
+            }
+        ).decode()
+        experiment_data["was_testbench_passed"] = mismatch_sample_count == 0
+        if experiment_data["was_testbench_passed"]:
+            logger.info(f"Testbench passed: {mismatch_sample_count=}, {total_sample_count=}")
+            experiment_data["exit_stage"] = "tb_pass"
+        else:
+            logger.warning(f"Testbench failed: {mismatch_sample_count=}, {total_sample_count=}")
+            experiment_data["exit_stage"] = "tb_fail"
+    else:
+        logger.warning("Could not find mismatched sample count in testbench output.")
+        experiment_data["was_testbench_passed"] = None
+        experiment_data["exit_stage"] = "tb_stats_not_found"
 
     return experiment_data
 

@@ -72,7 +72,7 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
     # log some stats
     num_problems = len(problems)
     logger.info(f"Loaded {num_problems:,} problems from verilog-eval.")
-    df = pl.DataFrame(problems)
+    df = pl.DataFrame([problem.to_dict() for problem in problems])
     logger.info(f"Problems, as a table: {df}")
 
     return problems

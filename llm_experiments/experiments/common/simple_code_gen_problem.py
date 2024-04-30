@@ -74,3 +74,14 @@ class SimpleCodeGenProblem:
         args_part = ", ".join([self.problem_id] + self.available_data_flags)
         parts = ["SimpleCodeGenProblem(", args_part, ")"]
         return "".join(parts)
+
+    def to_dict(self) -> dict:
+        return {
+            "problem_id": self.problem_id,
+            "problem_description": self.problem_description,
+            "module_header": self.module_header,
+            "testbench_code": self._testbench_code,
+            "canonical_solution": self._canonical_solution,
+            "code_language": self.code_language,
+            "other_data": self.other_data,
+        }
