@@ -1,15 +1,17 @@
 """\
-This experiment aims to validate that the testbenches and reference solution work correctly.
+This experiment aims to assess how capable various LLMs are at simply generating code for
+the select Verilog problems, with no feedback.
 
 The experiment is as follows:
 1. Load a list of Verilog problems from the verilog-eval repository.
 2. For each problem:
-    1. Load the canonical solution and testbench code for the problem.
-    2. Save the generated code to a file.
-    3. Run the code through IVerilog to check if it builds.
-    4. Run the code through IVerilog+vvp to run it, with the test bench.
-    5. Check the testbench output to see if it passed.
-    6. Collect data on the results.
+    1. Request that the LLM generates code from the problem prompt.
+    2. Extract the generated code.
+    3. Save the generated code to a file.
+    4. Run the code through IVerilog to check if it builds.
+    5. Run the code through IVerilog+vvp to run it, with the test bench.
+    6. Check the testbench output to see if it passed.
+    7. Collect data on the results.
 3. Save the experiment data to a file.
 """
 
@@ -41,35 +43,82 @@ from llm_experiments.util.execute_cli import CommandResult
 from llm_experiments.experiments.common.simple_code_gen_problem import SimpleCodeGenProblem
 from llm_experiments.experiments.common.verilog_eval_problems import load_verilog_eval_problems
 
+from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
+from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig
+from llm_experiments.llms.models.ollama_llm import OllamaLlm, solid_configs  # OllamaLlmConfig
+
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
 
 def do_experiment(
+    llm: LlmBase,
     problem: SimpleCodeGenProblem,
     working_dir: Path,
     logging_attributes: dict = {},
 ) -> dict:
-    """Runs a single assessment of the simplest possible code generation experiment."""
+    """Runs a single assessment of the simplest possible code generation experiment.
+
+    Runs the simplest possible experiment:
+    1. Request that the LLM generates code from the problem prompt.
+    2. Extract the generated code.
+    3. Save the generated code to a file.
+    4. Run the code through IVerilog to check if it builds.
+    5. Run the code through IVerilog+vvp to run it, with the test bench.
+    6. Collect data on the results.
+    """
 
     experiment_execution_uuid = uuid.uuid4()
 
     # Prep the return data
     experiment_save_dir = (
-        working_dir / "experiments" / f"{problem.problem_id}_{experiment_execution_uuid}"
+        working_dir
+        / f"experiments_{llm.configured_llm_name}"
+        / f"{problem.problem_id}_{experiment_execution_uuid}"
     )
     (experiment_inputs_dir := experiment_save_dir / "inputs").mkdir(parents=True)
     (experiment_outputs_dir := experiment_save_dir / "outputs").mkdir(parents=True)
 
-    canonical_solution_code = problem.get_canonical_solution(experiment_outputs_dir)
+    # Step 1: Request that the LLM generates code from the problem prompt
+    # TODO: assess prompt engineering strategies to improve performance here
+    llm_prompt_text = (
+        "You are a student learning Verilog/SystemVerilog. "
+        "Solve the following problem by writing a Verilog module. "
+        "Wrap your code in Markdown code blocks. "
+        "Do not write anything extraneous to the Verilog solution. "
+        "You will be given a template module. In your solution, repeat the template, and complete "
+        "the rest of the module. "
+        "Your solution should be a Verilog module which meets the following requirements: "
+        f"{problem.problem_description}"
+        f"\n\nTemplate module:\n{problem.module_header}\n// Your solution here"
+    )
+    (experiment_outputs_dir / "llm_prompt.txt").write_text(llm_prompt_text)
+
+    llm_prompt = LlmPrompt(llm_prompt_text)
+    (experiment_outputs_dir / "llm_prompt.json").write_bytes(
+        orjson.dumps(llm_prompt.to_dict(), option=orjson.OPT_INDENT_2)
+    )
+    llm_response: LlmResponse = llm.query_llm_basic(llm_prompt)
+    (experiment_outputs_dir / "llm_response.json").write_bytes(
+        orjson.dumps(llm_response.to_dict(), option=orjson.OPT_INDENT_2)
+    )
+    (experiment_outputs_dir / "llm_response.txt").write_text(llm_response.response_text)
+
     testbench_code = problem.get_testbench_code(experiment_outputs_dir)
 
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
+        "base_llm_name": llm.base_llm_name,
+        "configured_llm_name": llm.configured_llm_name,
+        "llm_configuration": orjson.dumps(llm.config.to_dict()).decode(),
         "problem_id": problem.problem_id,
         "problem_description": problem.problem_description,
+        "problem_module_header": problem.module_header,
+        "llm_response": llm_response.response_text,
+        "llm_response_metadata": orjson.dumps(llm_response.metadata).decode(),
         "experiment_save_dir": str(experiment_save_dir),
-        "solution_code": canonical_solution_code,
+        "extracted_generated_code": None,
         "testbench_code": testbench_code,
         "compile_result_return_code": None,
         "compile_result_stdout": None,
@@ -85,12 +134,15 @@ def do_experiment(
     }
 
     # Step 2: Extract the generated code
-    # generated_code: str | None = llm_response.extract_code("verilog_module")
-    # TODO: assert that this extraction would be successful
+    attempted_solution_code: str | None = llm_response.extract_code("verilog_module")
+    if attempted_solution_code is None:
+        logger.warning("Could not extract code from LLM response.")
+        experiment_data["exit_stage"] = "code_extraction_error"
+        return experiment_data
 
     # Step 3: Save the code to a file
-    verilog_file_path = experiment_inputs_dir / "solution_code.sv"
-    verilog_file_path.write_text(canonical_solution_code)
+    verilog_solution_file_path = experiment_inputs_dir / "attempted_solution_code.sv"
+    verilog_solution_file_path.write_text(attempted_solution_code)
 
     testbench_file_path = experiment_inputs_dir / "testbench_code.sv"
     testbench_file_path.write_text(testbench_code)
@@ -98,7 +150,7 @@ def do_experiment(
     # Step 4: Run the code through IVerilog to check if it builds
     vvp_file_path = experiment_outputs_dir / "compiled.vvp"
     compile_result: CommandResult = iverilog_tool.run_iverilog_compile_command(
-        verilog_file_list=[verilog_file_path, testbench_file_path],
+        verilog_file_list=[verilog_solution_file_path, testbench_file_path],
         output_vvp_file_path=vvp_file_path,
     )
     compile_result.command_step_name = "compile"
@@ -158,10 +210,12 @@ def run_experiment_all_inputs():
     )
 
     # Data Setup
+    experiment_name = Path(__file__).stem
     working_dir = make_data_dir(
-        f"validate_testbenches_{experiment_group_start_timestamp_str}",
+        f"{experiment_name}_{experiment_group_start_timestamp_str}",
         append_date=False,
     )
+    logger.info(f"Working directory: {working_dir}")
 
     # Experiment Setup/Logging
     logger.add(working_dir / "general_log.log")
@@ -181,10 +235,6 @@ def run_experiment_all_inputs():
 
     global_stats: dict = {
         "total_experiment_count": 0,
-        "valid_invalid_count": {
-            "valid": 0,
-            "invalid": 0,
-        },
         "exception_nonexception_count": {
             "exception": 0,
             "nonexception": 0,
@@ -193,61 +243,79 @@ def run_experiment_all_inputs():
 
     experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
 
-    for problem in problems:
-        logger.info(f"Running experiment for {problem=}")
-        global_stats["total_experiment_count"] += 1
+    # LLM Setup
+    llm_list: list[LlmBase] = [
+        MockLlm(
+            "mock_llm_no_preprogrammed_responses",
+            config=MockLlmConfig(
+                does_respond_to_test_queries=False,
+            ),
+        ),
+        OllamaLlm(
+            "llama2_7b_no_randomness",
+            config=solid_configs["llama2_7b_no_randomness"],
+        ),
+        OllamaLlm(
+            "tinyllama_no_randomness",
+            config=solid_configs["tinyllama_no_randomness"],
+        ),
+    ]
 
-        if not problem.has_canonical_solution or not problem.has_testbench_code:
-            logger.warning(f"Skipping problem due to missing data: {problem=}")
-            global_stats["valid_invalid_count"]["invalid"] += 1
-            continue
-        else:
-            global_stats["valid_invalid_count"]["valid"] += 1
+    for llm in llm_list:
+        llm.init_model()
+        logger.info(f"Initialized LLM: {llm}")
 
-        try:
-            experiment_data = do_experiment(
-                problem=problem,
-                working_dir=working_dir,
-                logging_attributes={
-                    "experiment_group_start_timestamp": experiment_group_start_timestamp
-                },
+        for problem in problems:
+            logger.info(f"Running experiment for {llm=}, {problem=}")
+            global_stats["total_experiment_count"] += 1
+
+            assert isinstance(problem, SimpleCodeGenProblem)
+            assert problem.has_testbench_code
+
+            try:
+                experiment_data = do_experiment(
+                    llm=llm,
+                    problem=problem,
+                    working_dir=working_dir,
+                    logging_attributes={
+                        "experiment_group_start_timestamp": experiment_group_start_timestamp
+                    },
+                )
+            except Exception as e:
+                logger.error(f"Error in experiment: {problem=}, {e=}")
+                logger.error(traceback.format_exc())
+                experiment_data = {
+                    "experiment_group_start_timestamp": experiment_group_start_timestamp,
+                    "problem_id": problem.problem_id,
+                    "problem_description": problem.problem_description,
+                    "exit_stage": "exception",
+                    "error": str(e),
+                }
+                global_stats["exception_nonexception_count"]["exception"] += 1
+            else:
+                global_stats["exception_nonexception_count"]["nonexception"] += 1
+
+            if experiment_data.get("experiment_save_dir"):
+                (
+                    Path(experiment_data["experiment_save_dir"]) / "experiment_data.json"
+                ).write_bytes(orjson.dumps(experiment_data, option=orjson.OPT_INDENT_2))
+                logger.info(f"Experiment data saved to: {experiment_data['experiment_save_dir']}")
+
+            experiment_data_short = filter_keys_in_dict(
+                experiment_data,
+                [
+                    "problem_id",
+                    "exit_stage",
+                    "was_compile_success",
+                    "was_execute_success",
+                    "was_testbench_passed",
+                ],
             )
-        except Exception as e:
-            logger.error(f"Error in experiment: {problem=}, {e=}")
-            logger.error(traceback.format_exc())
-            experiment_data = {
-                "experiment_group_start_timestamp": experiment_group_start_timestamp,
-                "problem_id": problem.problem_id,
-                "problem_description": problem.problem_description,
-                "exit_stage": "exception",
-                "error": str(e),
-            }
-            global_stats["exception_nonexception_count"]["exception"] += 1
-        else:
-            global_stats["exception_nonexception_count"]["nonexception"] += 1
+            logger.info(f"Done experiment. {experiment_data_short}")
 
-        if experiment_data.get("experiment_save_dir"):
-            with open(
-                Path(experiment_data["experiment_save_dir"]) / "experiment_data.json", "wb"
-            ) as f:
-                f.write(orjson.dumps(experiment_data, option=orjson.OPT_INDENT_2))
-            logger.info(f"Experiment data saved to: {experiment_data['experiment_save_dir']}")
-
-        experiment_data_short = filter_keys_in_dict(
-            experiment_data,
-            [
-                "problem_id",
-                "exit_stage",
-                "was_compile_success",
-                "was_execute_success",
-                "was_testbench_passed",
-            ],
-        )
-        logger.info(f"Done experiment. {experiment_data_short}")
-
-        with open(experiment_data_jsonl_path, "ab") as f:
-            f.write(orjson.dumps(experiment_data))
-            f.write(b"\n")
+            with open(experiment_data_jsonl_path, "ab") as f:
+                f.write(orjson.dumps(experiment_data))
+                f.write(b"\n")
 
     logger.info("Finished all experiments.")
     logger.info(

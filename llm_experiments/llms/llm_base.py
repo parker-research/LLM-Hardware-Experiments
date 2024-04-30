@@ -14,8 +14,10 @@ class LlmBase(abc.ABC):
         self._validate_configuration(config)
         self.config: LlmConfigBase = config
 
+        self._is_initialized: bool = False
+
     def __repr__(self) -> str:
-        return f"{self.base_llm_name}[{self.configured_llm_name}]"
+        return f"{self.base_llm_name}({self.configured_llm_name})"
 
     @classmethod
     @abc.abstractmethod

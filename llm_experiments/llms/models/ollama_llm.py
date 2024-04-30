@@ -10,6 +10,8 @@ from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
+from llm_experiments.llms.other.ollama_server import ollama_server_singleton
+
 
 @dataclass(kw_only=True)
 class OllamaLlmConfig(LlmConfigBase):
@@ -69,9 +71,11 @@ class OllamaLlm(LlmBase):
         on_backoff=lambda x: logger.info("Retrying Ollama pull..."),
     )
     def init_model(self) -> None:
+        ollama_server_singleton.start()
+
         # TODO: maybe check if the model is already local
         logger.info(f"Downloading Ollama model: {self.config.model_name}")
-        with tqdm(desc=f"Pulling {self.config.model_name} model", unit=" byte") as progress_bar:
+        with tqdm(desc=f"Pulling '{self.config.model_name}' model", unit=" byte") as progress_bar:
             for resp in ollama.pull(self.config.model_name, stream=True):
                 # Docs: https://github.com/ollama/ollama/blob/main/docs/api.md#response-19
                 new_total = resp.get("total", 1)
@@ -80,14 +84,18 @@ class OllamaLlm(LlmBase):
                 progress_bar.n = new_progress
 
         logger.info(f"Downloaded Ollama model: {self.config.model_name}")
+        self._is_initialized = True
 
     def destroy_model(self) -> None:
         ollama.delete(self.config.model_name)
+        ollama_server_singleton.stop()
+        self._is_initialized = False
 
     def check_is_connectable(self) -> bool:
         return True
 
     def query_llm_basic(self, prompt: LlmPrompt) -> LlmResponse:
+        assert self._is_initialized
         resp_full: dict = ollama.generate(
             model=self.config.model_name,
             prompt=prompt.prompt_text,
@@ -111,6 +119,7 @@ class OllamaLlm(LlmBase):
     def query_llm_chat(
         self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
     ) -> LlmResponse:
+        assert self._is_initialized
         messages_query = _convert_chat_history_to_ollama_api_dict(chat_history + [prompt])
         resp_full = ollama.chat(
             model=self.config.model_name,

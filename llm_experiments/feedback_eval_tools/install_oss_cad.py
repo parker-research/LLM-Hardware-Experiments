@@ -1,5 +1,4 @@
 from pathlib import Path
-import requests
 from datetime import date, datetime, timezone, timedelta
 from typing import Optional
 from loguru import logger
@@ -7,6 +6,7 @@ import shutil
 import os
 
 from llm_experiments.util.path_helpers import make_data_dir
+from llm_experiments.util.download_helpers import download_large_file
 
 # This file contains tools to download and install the OSS CAD suite.
 # Download link: https://github.com/YosysHQ/oss-cad-suite-build/releases
@@ -39,7 +39,7 @@ def install_oss_cad() -> None:
 
     if not local_tgz_file.is_file():
         logger.info("Downloading OSS CAD suite...")
-        _download_large_file(download_url, local_tgz_file)
+        download_large_file(download_url, local_tgz_file)
         logger.info(
             f"Downloaded OSS CAD suite file: {local_tgz_file}"
             f" (size: {local_tgz_file.stat().st_size:,} bytes)"
@@ -65,14 +65,6 @@ def install_oss_cad() -> None:
     os.environ["PATH"] = f"{bin_dir_path.absolute()}:{os.environ['PATH']}"
 
     logger.info(f"Added OSS CAD suite to PATH: {bin_dir_path}")
-
-
-def _download_large_file(url: str, path: Path) -> None:
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with path.open("wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
 
 
 if __name__ == "__main__":

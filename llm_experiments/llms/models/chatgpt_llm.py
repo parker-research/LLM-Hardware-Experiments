@@ -54,8 +54,10 @@ class ChatGptLlm(LlmBase):
         _api_key = read_secrets_file()["openai_api_key"]
         assert isinstance(_api_key, str)
         self._api_client = openai.OpenAI(api_key=_api_key)
+        self._is_initialized = True
 
     def destroy_model(self) -> None:
+        self._is_initialized = False
         pass
 
     def check_is_connectable(self) -> bool:
@@ -63,12 +65,14 @@ class ChatGptLlm(LlmBase):
 
     def query_llm_basic(self, prompt: LlmPrompt) -> LlmResponse:
         # TODO: check on system prompt
+        assert self._is_initialized
         resp = self.query_llm_chat(prompt, [])
         return resp
 
     def query_llm_chat(
         self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
     ) -> LlmResponse:
+        assert self._is_initialized
         messages_query = _convert_chat_history_to_openai_api_dict(chat_history + [prompt])
 
         # TODO: check on system prompt

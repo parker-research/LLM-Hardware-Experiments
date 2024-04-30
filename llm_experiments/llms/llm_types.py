@@ -28,6 +28,13 @@ class LlmPrompt:
         ]
         return "\n".join(lines)
 
+    def to_dict(self) -> dict:
+        return {
+            "prompt_text": self.prompt_text,
+            "role": self.role,
+            "uuid": str(self.uuid),
+        }
+
 
 class LlmResponse:
     def __init__(self, response_text: str, metadata: Optional[dict] = None):
@@ -53,6 +60,14 @@ class LlmResponse:
             return extract_verilog_module_from_text(self.response_text)
         else:
             raise ValueError(f"Unknown code type: {code_type}")
+
+    def to_dict(self) -> dict:
+        return {
+            "response_text": self.response_text,
+            "metadata": self.metadata,
+            "role": self.role,
+            "uuid": str(self.uuid),
+        }
 
 
 class LlmQuery:

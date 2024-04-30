@@ -19,7 +19,7 @@ class FeedbackEvalToolBase(abc.ABC):
         self.configured_tool_name: str = configured_tool_name
 
     def __repr__(self) -> str:
-        return f"{self.base_tool_name}[{self.configured_tool_name}]"
+        return f"{self.base_tool_name}({self.configured_tool_name})"
 
     @abc.abstractmethod
     def install_and_init_tool(self) -> None:

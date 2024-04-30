@@ -11,6 +11,7 @@ from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 @dataclass(kw_only=True)
 class MockLlmConfig(LlmConfigBase):
     does_respond_to_test_queries: bool = True
+    response_delay_seconds: float | int = 0.01
 
     def __post_init__(self):
         self.llm_class = "MockLlm"
@@ -34,17 +35,21 @@ class MockLlm(LlmBase):
         assert isinstance(config, LlmConfigBase)
         assert isinstance(config, MockLlmConfig)  # must be specifically THIS config class
         assert isinstance(config.does_respond_to_test_queries, bool)
+        assert isinstance(config.response_delay_seconds, (int, float))
 
     def init_model(self) -> None:
+        self._is_initialized = True
         return None
 
     def destroy_model(self) -> None:
+        self._is_initialized = False
         return None
 
     def check_is_connectable(self) -> bool:
         return True
 
     def query_llm_basic(self, prompt: LlmPrompt) -> LlmResponse:
+        assert self._is_initialized
         if self._get_regex_match_groups(
             r"Write.*(?P<number_of_sentences>\d+)\s*sentences.*ending.*apple",
             prompt.prompt_text,
@@ -67,13 +72,14 @@ class MockLlm(LlmBase):
             )
 
         # Gotta make it feel like an LLM
-        time.sleep(0.1)
+        time.sleep(self.config.response_delay_seconds)
 
         return LlmResponse(response_text)
 
     def query_llm_chat(
         self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
     ) -> LlmResponse:
+        assert self._is_initialized
         self.query_llm_basic(prompt)
 
     @staticmethod

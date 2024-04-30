@@ -6,13 +6,21 @@ from typing import Any
 import orjson
 from pathlib import Path
 
+import git
 from loguru import logger
 
 
 def _get_system_environment_info() -> dict[str, dict[str, Any]]:
+    git_repo = git.Repo(__file__, search_parent_directories=True)
 
     # Create a dictionary to store environment info
     env_info = {
+        "Time Info": {
+            "Current Local Time": datetime.now(),
+            "Current UTC Time": datetime.now(timezone.utc),
+            "Timezone": str(datetime.now().astimezone().tzinfo),
+            "Timezone Name": datetime.now().astimezone().tzname(),
+        },
         "System Info": {
             "Platform": platform.platform(),
             "System": platform.system(),
@@ -20,6 +28,21 @@ def _get_system_environment_info() -> dict[str, dict[str, Any]]:
             "Processor": platform.processor(),
             "Python Version": platform.python_version(),
             "Python Implementation": platform.python_implementation(),
+        },
+        "Git Info": {
+            "Git Root Directory": git_repo.working_dir,
+            "Git Branch": git_repo.active_branch.name,
+            "Git Commit": git_repo.head.commit.hexsha,
+            "Git Commit Message": git_repo.head.commit.message.strip(),
+            "Git Commit Time": git_repo.head.commit.committed_datetime,
+            "Git Commit Time Ago (HMS)": str(
+                datetime.now(timezone.utc) - git_repo.head.commit.committed_datetime
+            ),
+            "Git Commit Time Ago (Minutes)": (
+                datetime.now(timezone.utc) - git_repo.head.commit.committed_datetime
+            ).total_seconds()
+            / 60,
+            "Has Uncommitted Changes (Is Dirty)": git_repo.is_dirty(),
         },
         "Environment Info": {
             "Working Directory": os.getcwd(),
@@ -41,18 +64,12 @@ def _get_system_environment_info() -> dict[str, dict[str, Any]]:
             "Process Group ID (again)": os.getgid(),
             "Process Effective Group ID": os.getegid(),
         },
-        "Other Info": {
-            "Current Local Time": datetime.now(),
-            "Current UTC Time": datetime.now(timezone.utc),
-            "Timezone": str(datetime.now().astimezone().tzinfo),
-            "Timezone Name": datetime.now().astimezone().tzname(),
-        },
     }
     return env_info
 
 
-def _get_gpu_env_info():
-    """Logs GPU information."""
+def _get_gpu_env_info() -> dict:
+    """Gets GPU information as dict."""
     gpu_info = {}
 
     # Attempt to import and log PyTorch GPU info
@@ -115,10 +132,10 @@ def log_env_info(env_info: dict[str, dict[str, Any]]):
 
     logger.info("Logging environment info...")
     for section, values in env_info.items():
-        logger.info(f"{section}:")
+        # logger.info(f"{section}:")
         if isinstance(values, dict):
             for key, value in values.items():
-                logger.info(f"{key}: {value}")
+                logger.info(f"({section}) -> {key}: {value}")
         else:
             logger.info(values)
 
