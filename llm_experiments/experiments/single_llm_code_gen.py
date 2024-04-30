@@ -347,13 +347,10 @@ def run_experiment_all_inputs():
         df.write_parquet(working_dir / "experiment_data.parquet")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
-        df_stats_1 = (
-            df.group_by(["base_llm_name", "configured_llm_name", "exit_stage"])
-            .agg(
-                count=pl.len(),
-            )
-            .sort()
+        df_stats_1 = df.group_by(["base_llm_name", "configured_llm_name", "exit_stage"]).agg(
+            count=pl.len(),
         )
+        df_stats_1 = df_stats_1.sort(df_stats_1.columns)
         logger.info(f"Experiment data stats (by exit_stage): {df_stats_1}")
     else:
         logger.warning("No .jsonl file. Appears that all experiments were skipped.")

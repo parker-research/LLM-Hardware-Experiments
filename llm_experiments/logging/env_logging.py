@@ -146,7 +146,7 @@ def get_all_env_info() -> dict[str, dict[str, Any]]:
     gpu_info = _get_gpu_env_info()
     env_info.update(gpu_info)
 
-    # TODO: tool versioning info (Iverilog/OSSCAD, PyPI packages, etc.)
+    # TODO: tool versioning info (Iverilog/OSSCAD, PyPI packages, datasets, etc.)
 
     env_info["SLURM Info"] = _get_slurm_env_info()
 
