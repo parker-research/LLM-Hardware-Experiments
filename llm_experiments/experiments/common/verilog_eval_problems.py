@@ -19,7 +19,8 @@ def get_verilog_eval_repo() -> Path:
 
         # clone the repo
         repo = git.Repo.clone_from(
-            "https://github.com/NVlabs/verilog-eval",
+            # "https://github.com/NVlabs/verilog-eval",
+            "https://github.com/parker-research/verilog-eval",
             to_path=verilog_eval_git_root,
         )
         logger.info(
@@ -64,6 +65,7 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
                 + "\n"
             ),
             testbench_code=row["test"],
+            code_language="systemverilog",
         )
         problems.append(problem)
 

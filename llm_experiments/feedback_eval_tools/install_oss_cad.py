@@ -1,6 +1,6 @@
 from pathlib import Path
 import requests
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from typing import Optional
 from loguru import logger
 import shutil
@@ -17,7 +17,8 @@ def _get_oss_cad_download_url(release_date: Optional[date]) -> str:
     If no date is provided, the current date (in UTC) is used (i.e., the latest release is used).
     """
     if release_date is None:
-        release_date = datetime.now(timezone.utc).date()
+        # assume it takes about 10h for a release to be available
+        release_date = (datetime.now(timezone.utc) - timedelta(hours=10)).date()
 
     return (
         "https://github.com/YosysHQ/oss-cad-suite-build/releases/"

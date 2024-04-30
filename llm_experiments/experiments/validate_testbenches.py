@@ -59,14 +59,17 @@ def do_experiment(
     (experiment_inputs_dir := experiment_save_dir / "inputs").mkdir(parents=True)
     (experiment_outputs_dir := experiment_save_dir / "outputs").mkdir(parents=True)
 
+    canonical_solution_code = problem.get_canonical_solution(experiment_outputs_dir)
+    testbench_code = problem.get_testbench_code(experiment_outputs_dir)
+
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
         "problem_id": problem.problem_id,
         "problem_description": problem.problem_description,
         "experiment_save_dir": str(experiment_save_dir),
-        "solution_code": problem.canonical_solution,
-        "testbench_code": problem.testbench_code,
+        "solution_code": canonical_solution_code,
+        "testbench_code": testbench_code,
         "compile_result_return_code": None,
         "compile_result_stdout": None,
         "compile_result_stderr": None,
@@ -84,11 +87,11 @@ def do_experiment(
     # TODO: assert that this extraction would be successful
 
     # Step 3: Save the code to a file
-    verilog_file_path = experiment_inputs_dir / "solution_code.v"
-    verilog_file_path.write_text(problem.canonical_solution)
+    verilog_file_path = experiment_inputs_dir / "solution_code.sv"
+    verilog_file_path.write_text(canonical_solution_code)
 
-    testbench_file_path = experiment_inputs_dir / "testbench_code.v"
-    testbench_file_path.write_text(problem.testbench_code)
+    testbench_file_path = experiment_inputs_dir / "testbench_code.sv"
+    testbench_file_path.write_text(testbench_code)
 
     # Step 4: Run the code through IVerilog to check if it builds
     vvp_file_path = experiment_outputs_dir / "compiled.vvp"
