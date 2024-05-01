@@ -147,8 +147,9 @@ def scan_file_for_bugs(
     return experiment_data
 
 
-def run_scanner_as_experiment(project_dir_to_scan: Path, llama_model_name: str):
-    logger.info("Starting simple single code generation experiment.")
+def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name: str):
+    if isinstance(project_dir_to_scan, str):
+        project_dir_to_scan = Path(project_dir_to_scan)
 
     experiment_group_start_timestamp = datetime.now()
     experiment_group_start_timestamp_str = get_file_date_str(
