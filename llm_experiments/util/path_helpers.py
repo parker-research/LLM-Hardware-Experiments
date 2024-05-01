@@ -55,3 +55,12 @@ def read_secrets_file(secrets_file_path: Optional[Path] = None) -> dict:
     with open(secrets_file_path, "r") as f:
         secrets = yaml.safe_load(f)
     return secrets
+
+
+def get_folder_total_size(folder_path: Path) -> int:
+    """Returns the total size of all files in the folder_path directory, in bytes."""
+    total_size = 0
+    for path in folder_path.rglob("*"):
+        if path.is_file():
+            total_size += path.stat().st_size
+    return total_size

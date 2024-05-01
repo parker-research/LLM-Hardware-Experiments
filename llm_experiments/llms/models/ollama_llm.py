@@ -5,6 +5,9 @@ from tqdm import tqdm
 import backoff
 from loguru import logger
 import ollama
+import re
+
+from llm_experiments.util.path_helpers import get_folder_total_size
 
 from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
@@ -48,13 +51,20 @@ class OllamaLlmConfig(LlmConfigBase):
 
 class OllamaLlm(LlmBase):
     def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        super().__init__(configured_llm_name, config)
-
-    @classmethod
-    def _validate_configuration(cls, config: LlmConfigBase):
         assert isinstance(config, LlmConfigBase)
         assert isinstance(config, OllamaLlmConfig)  # must be specifically THIS config class
         assert isinstance(config.model_name, str)
+
+        super().__init__(configured_llm_name, config)
+
+        # extract the parameter count
+        param_count_match = re.search(r"(?P<param_count_billions>\d+(\.\d+))b", config.model_name)
+        if param_count_match:
+            self.llm_metadata.parameter_count_billions = float(
+                param_count_match.group("param_count_billions")
+            )
+        else:
+            raise ValueError(f"Could not find parameter count in model_name: {config.model_name}")
 
     def _list_local_models(self) -> list[dict]:
         # docs: https://github.com/ollama/ollama/blob/main/docs/api.md#list-local-models
@@ -75,6 +85,7 @@ class OllamaLlm(LlmBase):
 
         # TODO: maybe check if the model is already local
         logger.info(f"Downloading Ollama model: {self.config.model_name}")
+        resp = {}
         with tqdm(
             desc=f"Pulling '{self.config.model_name}' model",
             unit="iB",
@@ -89,7 +100,17 @@ class OllamaLlm(LlmBase):
                 progress_bar.n = new_progress
                 progress_bar.refresh()
 
-        logger.info(f"Downloaded Ollama model: {self.config.model_name}")
+        self.llm_metadata.local_storage_size_bytes = resp.get("total", None)
+        model_size_GiB = resp.get("total", 0) / (1024**3)
+        storage_folder_size_GiB = get_folder_total_size(
+            ollama_server_singleton._ollama_model_data_store_path
+        )
+        logger.info(
+            f"Downloaded Ollama model: {self.config.model_name}. "
+            # TODO: confirm this show if the model is downloaded already
+            f"This model size: {model_size_GiB:.2f} GiB "
+            f"This storage folder size: {storage_folder_size_GiB:.2f} GiB"
+        )
         self._is_initialized = True
 
     def destroy_model(self) -> None:

@@ -3,7 +3,7 @@ from typing import Literal
 import json
 
 from llm_experiments.llms.llm_config_base import LlmConfigBase
-from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
+from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse, LlmMetadata
 
 
 class LlmBase(abc.ABC):
@@ -11,19 +11,14 @@ class LlmBase(abc.ABC):
         self.configured_llm_name: str = configured_llm_name
         self.base_llm_name: str = self.__class__.__name__
 
-        self._validate_configuration(config)
         self.config: LlmConfigBase = config
 
         self._is_initialized: bool = False
 
+        self.llm_metadata = LlmMetadata()
+
     def __repr__(self) -> str:
         return f"{self.base_llm_name}({self.configured_llm_name})"
-
-    @classmethod
-    @abc.abstractmethod
-    def _validate_configuration(cls, config: LlmConfigBase):
-        """Check that the configuration options are valid. Raise an exception if not."""
-        pass
 
     @abc.abstractmethod
     def init_model(self) -> None:

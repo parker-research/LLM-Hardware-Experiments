@@ -27,7 +27,7 @@ class ChatGptLlmConfig(LlmConfigBase):
         super().__post_init__()
 
     def validate_config(self) -> None:
-        pass
+        assert isinstance(self.model_name, str)
 
     def to_openai_api_dict(self) -> dict:
         options = {}
@@ -42,13 +42,10 @@ class ChatGptLlmConfig(LlmConfigBase):
 
 class ChatGptLlm(LlmBase):
     def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        super().__init__(configured_llm_name, config)
-
-    @classmethod
-    def _validate_configuration(cls, config: LlmConfigBase):
         assert isinstance(config, LlmConfigBase)
         assert isinstance(config, ChatGptLlmConfig)  # must be specifically THIS config class
-        assert isinstance(config.model_name, str)
+
+        super().__init__(configured_llm_name, config)
 
     def init_model(self) -> None:
         _api_key = read_secrets_file()["openai_api_key"]

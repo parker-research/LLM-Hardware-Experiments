@@ -19,6 +19,7 @@ class MockLlmConfig(LlmConfigBase):
 
     def validate_config(self) -> None:
         assert isinstance(self.does_respond_to_test_queries, bool)
+        assert isinstance(self.response_delay_seconds, (float, int))
 
 
 class MockLlm(LlmBase):
@@ -28,14 +29,10 @@ class MockLlm(LlmBase):
     """
 
     def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        super().__init__(configured_llm_name, config)
-
-    @classmethod
-    def _validate_configuration(cls, config: LlmConfigBase):
         assert isinstance(config, LlmConfigBase)
         assert isinstance(config, MockLlmConfig)  # must be specifically THIS config class
-        assert isinstance(config.does_respond_to_test_queries, bool)
-        assert isinstance(config.response_delay_seconds, (int, float))
+
+        super().__init__(configured_llm_name, config)
 
     def init_model(self) -> None:
         self._is_initialized = True
