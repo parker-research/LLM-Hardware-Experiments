@@ -25,7 +25,7 @@ from llm_experiments.util.path_helpers import (
 )
 
 
-from llm_experiments.intermediate_steps.split_large_files import (
+from llm_experiments.intermediate_steps.split_large_files import (  # noqa
     split_large_file_by_large_line_breaks,
 )
 from llm_experiments.intermediate_steps.line_numbering import add_line_numbers
@@ -71,25 +71,28 @@ def scan_file_for_bugs(
 
     file_contents = file_path.read_text()
 
-    chunks = split_large_file_by_large_line_breaks(
-        file_contents, min_lines_per_chunk=8, max_lines_per_chunk=20
+    # chunks = split_large_file_by_large_line_breaks(
+    #     file_contents, min_lines_per_chunk=8, max_lines_per_chunk=20
+    # )
+    # start_of_chunk_line_number = 0
+    # for chunk in chunks:
+    #     chunk_file_path = experiment_inputs_dir / f"{start_of_chunk_line_number}_{file_path.name}" # noqa
+    #     chunk_file_path.write_text(chunk)
+    #     start_of_chunk_line_number += len(chunk.split("\n"))
+
+    #     file_contents_with_line_numbers = add_line_numbers(
+    #         chunk, location="prefix", start_line_number=start_of_chunk_line_number
+    #     )
+    #     chunk_file_path_with_line_numbers = (
+    #         experiment_inputs_dir
+    #         / f"{start_of_chunk_line_number}_{file_path.stem}_numbered.{file_path.suffix}"
+    #     )
+    #     chunk_file_path_with_line_numbers.write_text(file_contents_with_line_numbers)
+
+    # TODO: deal with long files even better
+    file_contents_with_line_numbers = add_line_numbers(
+        file_contents, location="prefix", start_line_number=1
     )
-    start_of_chunk_line_number = 0
-    for chunk in chunks:
-        chunk_file_path = experiment_inputs_dir / f"{start_of_chunk_line_number}_{file_path.name}"
-        chunk_file_path.write_text(chunk)
-        start_of_chunk_line_number += len(chunk.split("\n"))
-
-        file_contents_with_line_numbers = add_line_numbers(
-            chunk, location="prefix", start_line_number=start_of_chunk_line_number
-        )
-        chunk_file_path_with_line_numbers = (
-            experiment_inputs_dir
-            / f"{start_of_chunk_line_number}_{file_path.stem}_numbered.{file_path.suffix}"
-        )
-        chunk_file_path_with_line_numbers.write_text(file_contents_with_line_numbers)
-
-    # TODO: deal with long files
 
     # Step 1: Request that the LLM generates code from the problem prompt
     # TODO: assess prompt engineering strategies to improve performance here
@@ -104,7 +107,7 @@ def scan_file_for_bugs(
         f"{file_contents_with_line_numbers}"
     )
     # TODO: could experiment with bug found/not found at the end of the prompt
-    (experiment_outputs_dir / "llm_prompt.txt").write_text(llm_prompt_text)
+    (experiment_inputs_dir / "llm_prompt.txt").write_text(llm_prompt_text)
 
     llm_prompt = LlmPrompt(llm_prompt_text)
     (experiment_outputs_dir / "llm_prompt.json").write_bytes(
@@ -117,16 +120,23 @@ def scan_file_for_bugs(
     (experiment_outputs_dir / "llm_response.txt").write_text(llm_response.response_text)
 
     # log it
-    logger.info(f"LLM Prompt: {llm_response.response_text}")
+    logger.info(f"LLM Prompt: {llm_prompt}")
 
-    if "bug not found" in llm_response.response_text.lower():
-        logger.info(f"❌ LLM Response: {llm_response.response_text}")
+    if (
+        "bug not found" in llm_response.response_text.lower()
+        and "bug found" in llm_response.response_text.lower()
+    ):
+        # response is something like "I can't say whether it ..."
+        logger.warning(f"🤷 LLM Response: {llm_response}")
+        bug_found_status = "UNKNOWN"
+    elif "bug not found" in llm_response.response_text.lower():
+        logger.info(f"❌ LLM Response: {llm_response}")
         bug_found_status = "BUG NOT FOUND"
     elif "bug found" in llm_response.response_text.lower():
-        logger.info(f"🐞 LLM Response: {llm_response.response_text}")
+        logger.info(f"🐞 LLM Response: {llm_response}")
         bug_found_status = "BUG FOUND"
     else:
-        logger.info(f"🤷 LLM Response: {llm_response.response_text}")
+        logger.info(f"🤷 LLM Response: {llm_response}")
         bug_found_status = "UNKNOWN"
 
     experiment_data = {
