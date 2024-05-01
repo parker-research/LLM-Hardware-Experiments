@@ -40,6 +40,7 @@ from llm_experiments.feedback_eval_tools.tools.iverilog_tool import (
 from llm_experiments.util.execute_cli import CommandResult
 from llm_experiments.experiments.common.simple_code_gen_problem import SimpleCodeGenProblem
 from llm_experiments.experiments.common.verilog_eval_problems import load_verilog_eval_problems
+from llm_experiments.intermediate_steps.extract_verilog import extract_verilog_module_from_text
 
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
@@ -84,9 +85,13 @@ def do_experiment(
         "exit_stage": "end",
     }
 
-    # Step 2: Extract the generated code
-    # generated_code: str | None = llm_response.extract_code("verilog_module")
-    # TODO: assert that this extraction would be successful
+    # Step 2: Extract the "generated" code.
+    # In this testbench validation, this is validation that the code extractor works.
+    extracted_code: str | None = extract_verilog_module_from_text(canonical_solution_code)
+    assert extracted_code, "Could not extract verilog module from canonical solution code."
+    assert len(extracted_code) > 0.75 * len(
+        canonical_solution_code
+    ), "Extracted code is too short."
 
     # Step 3: Save the code to a file
     verilog_file_path = experiment_inputs_dir / "solution_code.sv"

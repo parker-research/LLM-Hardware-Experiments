@@ -54,10 +54,8 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
         problem = SimpleCodeGenProblem(
             problem_id="verilog-eval_" + row["task_id"],
             problem_description=row["detail_description"],
-            # canonical_solution=row.get("canonical_solution"),
-            # testbench_code=row.get("test"),
             module_header=row["prompt"],
-            # currently, canonical_solution doesn't include the module header
+            # In source, "canonical_solution" doesn't include the module_header ("prompt")
             canonical_solution=(
                 row["prompt"].strip()
                 + "\n\n\t// BREAK between verilog_eval 'prompt' and 'canonical_solution'\n\n"

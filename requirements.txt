@@ -28,7 +28,7 @@ backoff>=*
 # Large Language Models ####
 ############################
 ollama~=0.1.8
-openai~=1.23.6
+openai~=1.24.0
 
 
 torch>=*
