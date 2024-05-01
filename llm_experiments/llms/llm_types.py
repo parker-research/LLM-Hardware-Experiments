@@ -1,6 +1,5 @@
 from typing import Literal, Optional
 import uuid
-from dataclasses import dataclass
 
 # from loguru import logger
 
@@ -89,12 +88,3 @@ class LlmQuery:
             ),
         ]
         return "\n".join(lines)
-
-
-@dataclass
-class LlmMetadata:
-    """Metadata for an LLM model."""
-
-    parameter_count_billions: Optional[float | int] = None
-    local_storage_size_bytes: Optional[int] = None
-    # TODO: can add more

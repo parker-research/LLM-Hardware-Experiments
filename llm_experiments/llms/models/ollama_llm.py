@@ -1,13 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 
 from tqdm import tqdm
 import backoff
 from loguru import logger
 import ollama
 import re
+import json
 
 from llm_experiments.util.path_helpers import get_folder_total_size
+from llm_experiments.logging.presenters import flatten_dict
 
 from llm_experiments.llms.llm_base import LlmBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
@@ -60,13 +62,14 @@ class OllamaLlm(LlmBase):
         # extract the parameter count
         param_count_match = re.search(r"(?P<param_count_billions>\d+(\.\d+)?)b", config.model_name)
         if param_count_match:
-            self.llm_metadata.parameter_count_billions = float(
+            self.model_metadata["parameter_count_billions"] = float(
                 param_count_match.group("param_count_billions")
             )
         else:
             raise ValueError(f"Could not find parameter count in model_name: {config.model_name}")
 
-    def _list_local_models(self) -> list[dict]:
+    @staticmethod
+    def _list_local_models() -> list[dict]:
         # docs: https://github.com/ollama/ollama/blob/main/docs/api.md#list-local-models
         local_models_resp = ollama.list()
         local_models: list[dict] = local_models_resp["models"]
@@ -83,35 +86,50 @@ class OllamaLlm(LlmBase):
     def init_model(self) -> None:
         ollama_server_singleton.start()
 
-        # TODO: maybe check if the model is already local
+        # Check if the model is already local, and if so, skip the download.
+        local_models = self._list_local_models()
+        if self.config.model_name in [model["name"] for model in local_models]:
+            logger.info(f"Model '{self.config.model_name}' already downloaded.")
+            self._is_initialized = True
+            return
+
         logger.info(f"Downloading Ollama model: {self.config.model_name}")
-        resp = {}
         with tqdm(
             desc=f"Pulling '{self.config.model_name}' model",
             unit="iB",
             unit_divisor=1024,
             unit_scale=True,
         ) as progress_bar:
-            for resp in ollama.pull(self.config.model_name, stream=True):
+            for stream_status in ollama.pull(self.config.model_name, stream=True):
                 # Docs: https://github.com/ollama/ollama/blob/main/docs/api.md#response-19
-                new_total = resp.get("total", 1)
-                new_progress = resp.get("completed", 0)
-                progress_bar.total = new_total
-                progress_bar.n = new_progress
-                progress_bar.refresh()
+                if "progress" in stream_status:
+                    progress_bar.n = stream_status["progress"]
+                if "total" in stream_status:
+                    progress_bar.total = stream_status["total"]
+                if "total" in stream_status or "completed" in stream_status:
+                    progress_bar.refresh()
 
-        self.llm_metadata.local_storage_size_bytes = resp.get("total", None)
-        model_size_GiB = resp.get("total", 0) / (1024**3)
+        model_size_GiB = self.get_model_metadata()["size"] / (1024**3)
         storage_folder_size_GiB = get_folder_total_size(
             ollama_server_singleton._ollama_model_data_store_path
         )
         logger.info(
             f"Downloaded Ollama model: {self.config.model_name}. "
-            # TODO: confirm this show if the model is downloaded already
-            f"This model size: {model_size_GiB:.2f} GiB "
-            f"This storage folder size: {storage_folder_size_GiB:.2f} GiB"
+            f"This model size: {model_size_GiB:.2f} GiB. "
+            f"Ollama storage folder size: {storage_folder_size_GiB:.2f} GiB."
         )
         self._is_initialized = True
+
+    def get_model_metadata(self) -> dict[str, Any]:
+        list_local_models = self._list_local_models()
+        model_metadata = next(
+            (model for model in list_local_models if model["name"] == self.config.model_name),
+            {},
+        )
+
+        # flatten the metadata
+        model_metadata_flat = flatten_dict(model_metadata)
+        return model_metadata_flat
 
     def destroy_model(self) -> None:
         ollama.delete(self.config.model_name)
@@ -206,3 +224,6 @@ ollama_good_configs: dict[str, OllamaLlmConfig] = {
         option_temperature=0,
     ),
 }
+
+if __name__ == "__main__":
+    logger.info(f"Local models: {json.dumps(OllamaLlm._list_local_models(), indent=2)}")

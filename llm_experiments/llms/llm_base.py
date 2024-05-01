@@ -3,7 +3,7 @@ from typing import Literal
 import json
 
 from llm_experiments.llms.llm_config_base import LlmConfigBase
-from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse, LlmMetadata
+from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
 
 class LlmBase(abc.ABC):
@@ -15,7 +15,7 @@ class LlmBase(abc.ABC):
 
         self._is_initialized: bool = False
 
-        self.llm_metadata = LlmMetadata()
+        self.model_metadata = {}
 
     def __repr__(self) -> str:
         return f"{self.base_llm_name}({self.configured_llm_name})"
