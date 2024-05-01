@@ -10,12 +10,12 @@ from llm_experiments.llms.models.ollama_llm import OllamaLlm, OllamaLlmConfig
 
 
 def pull_ollama_model(model_name: str) -> None:
-    logger.info(f"Pulling model: {model_name}")
+    logger.info(f"🏁 Pulling model: {model_name}")
     config = OllamaLlmConfig(model_name=model_name)
     llm = OllamaLlm("ollama", config)
-    llm.pull()
+    llm.init_model()
 
-    logger.info(f"Model {model_name} is ready to use.")
+    logger.info(f"🎬 Model {model_name} is ready to use.")
 
 
 def main_cli():
