@@ -150,6 +150,8 @@ def scan_file_for_bugs(
 def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name: str):
     if isinstance(project_dir_to_scan, str):
         project_dir_to_scan = Path(project_dir_to_scan)
+    assert project_dir_to_scan.is_dir()
+    logger.info(f"Scanning project directory: {project_dir_to_scan}")
 
     experiment_group_start_timestamp = datetime.now()
     experiment_group_start_timestamp_str = get_file_date_str(
@@ -194,14 +196,13 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
         ),
     ]
 
+    target_files = list(project_dir_to_scan.rglob("*.v")) + list(project_dir_to_scan.rglob("*.sv"))
+    logger.info(f"Found {len(target_files):,} target files to scan.")
+
     for llm in llm_list:
         llm.init_model()
         logger.info(f"Initialized LLM: {llm}")
 
-        target_files = list(project_dir_to_scan.glob("**/*.v")) + list(
-            project_dir_to_scan.glob("**/*.sv")
-        )
-        logger.info(f"Found {len(target_files):,} target files to scan.")
         for target_file_path in target_files:
             logger.info(f"Running experiment for {llm=}, {target_file_path=}")
             global_stats["total_experiment_count"] += 1

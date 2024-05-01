@@ -112,7 +112,7 @@ class OllamaLlm(LlmBase):
         model_size_GiB = self.get_model_metadata()["size"] / (1024**3)
         storage_folder_size_GiB = get_folder_total_size(
             ollama_server_singleton._ollama_model_data_store_path
-        )
+        ) / (1024**3)
         logger.info(
             f"Downloaded Ollama model: {self.config.model_name}. "
             f"This model size: {model_size_GiB:.2f} GiB. "
