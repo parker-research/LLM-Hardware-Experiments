@@ -201,6 +201,7 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
         target_files = list(project_dir_to_scan.glob("**/*.v")) + list(
             project_dir_to_scan.glob("**/*.sv")
         )
+        logger.info(f"Found {len(target_files):,} target files to scan.")
         for target_file_path in target_files:
             logger.info(f"Running experiment for {llm=}, {target_file_path=}")
             global_stats["total_experiment_count"] += 1
