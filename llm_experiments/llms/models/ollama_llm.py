@@ -75,7 +75,12 @@ class OllamaLlm(LlmBase):
 
         # TODO: maybe check if the model is already local
         logger.info(f"Downloading Ollama model: {self.config.model_name}")
-        with tqdm(desc=f"Pulling '{self.config.model_name}' model", unit=" byte") as progress_bar:
+        with tqdm(
+            desc=f"Pulling '{self.config.model_name}' model",
+            unit="iB",
+            unit_divisor=1024,
+            unit_scale=True,
+        ) as progress_bar:
             for resp in ollama.pull(self.config.model_name, stream=True):
                 # Docs: https://github.com/ollama/ollama/blob/main/docs/api.md#response-19
                 new_total = resp.get("total", 1)
