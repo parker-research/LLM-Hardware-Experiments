@@ -23,6 +23,12 @@ class OllamaServer:
             / "ollama-linux-amd64"
         )
 
+        # Set the path to the Ollama model data store to avoid re-downloading models as much.
+        # Gets passed to "OLLAMA_MODELS" environment variable.
+        self._ollama_model_data_store_path = make_data_dir(
+            "tools/ollama_model_data", append_date=False
+        )
+
         # NOTE: other config options from "./ollama serve --help" include:
         # OLLAMA_HOST         The host:port to bind to (default "127.0.0.1:11434")
         # OLLAMA_ORIGINS      A comma separated list of allowed origins.
@@ -53,6 +59,7 @@ class OllamaServer:
             stderr=subprocess.STDOUT,  # redirect stderr to stdout file
             text=True,
             preexec_fn=os.setsid,
+            env=dict(os.environ) | {"OLLAMA_MODELS": str(self._ollama_model_data_store_path)},
         )  # Set session ID
         logger.info(f"Ollama server started with PID: {self.process.pid}")
 

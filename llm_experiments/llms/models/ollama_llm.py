@@ -82,6 +82,7 @@ class OllamaLlm(LlmBase):
                 new_progress = resp.get("completed", 0)
                 progress_bar.total = new_total
                 progress_bar.n = new_progress
+                progress_bar.refresh()
 
         logger.info(f"Downloaded Ollama model: {self.config.model_name}")
         self._is_initialized = True
