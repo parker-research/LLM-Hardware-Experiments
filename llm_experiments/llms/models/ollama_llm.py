@@ -58,7 +58,7 @@ class OllamaLlm(LlmBase):
         super().__init__(configured_llm_name, config)
 
         # extract the parameter count
-        param_count_match = re.search(r"(?P<param_count_billions>\d+(\.\d+))b", config.model_name)
+        param_count_match = re.search(r"(?P<param_count_billions>\d+(\.\d+)?)b", config.model_name)
         if param_count_match:
             self.llm_metadata.parameter_count_billions = float(
                 param_count_match.group("param_count_billions")
