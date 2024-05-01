@@ -81,7 +81,7 @@ class OllamaLlm(LlmBase):
         Exception,
         interval=5,
         max_tries=3,
-        on_backoff=lambda x: logger.info("Retrying Ollama pull..."),
+        on_backoff=lambda x: logger.info(f"Retrying Ollama pull ({x})..."),
     )
     def init_model(self) -> None:
         ollama_server_singleton.start()

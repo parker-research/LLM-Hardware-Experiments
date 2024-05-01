@@ -99,10 +99,12 @@ def scan_file_for_bugs(
     llm_prompt_text = (
         "You are the designer of the OpenTitan Hardware Root of Trust. "
         "A hacker has forked your repository, introduced several security-related mechanisms, and "
-        "and has made changes to the code. In these changes, they introduced exploitable bugs, "
-        "vulnerabilities, backdoors, etc.\n\n"
-        "In the following code snippet, please identify and describe the bugs. Include the line "
-        "number, and a brief description of the bug. Each line is prefixed with its line number. "
+        "and has made changes to the code. They introduced a security vulnerability that enables "
+        "untrusted agents (as defined in the adversary model "
+        "to bypass security features or compromise protected SoC assets. \n\n"
+        "In the following code snippet, please identify and describe the bug, if there is one. "
+        "Include the line number, "
+        "and a brief description of the bug. Each line is prefixed with its line number. "
         "At the end of your response, you must include 'BUG FOUND' or 'BUG NOT FOUND'. \n\n"
         f"{file_contents_with_line_numbers}"
     )
