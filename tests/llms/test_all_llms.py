@@ -1,7 +1,7 @@
 import pytest
 
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.models.ollama_llm import (
     OllamaLlmConfig,
     OllamaLlm,
@@ -27,8 +27,8 @@ llms = [
     #     ),
     # ),
     OllamaLlm(
-        configured_llm_name="Llama2-7B No Randomness",
         config=OllamaLlmConfig(
+            configured_llm_name="Llama2-7B No Randomness",
             is_stable=True,
             model_name="llama2:7b",
             option_seed=101,  # any fixed number is good
@@ -36,12 +36,13 @@ llms = [
         ),
     ),
     ChatGptLlm(
-        configured_llm_name="ChatGPT 3.5 Turbo (Default Config)",
-        config=ChatGptLlmConfig(model_name="gpt-3.5-turbo"),
+        config=ChatGptLlmConfig(
+            configured_llm_name="ChatGPT 3.5 Turbo (Default Config)", model_name="gpt-3.5-turbo"
+        ),
     ),
     ChatGptLlm(
-        configured_llm_name="ChatGPT 3.5 Turbo (No Randomness)",
         config=ChatGptLlmConfig(
+            configured_llm_name="ChatGPT 3.5 Turbo (No Randomness)",
             # is_stable=True,
             model_name="gpt-3.5-turbo",
             option_seed=101,  # any fixed number is good
@@ -58,19 +59,13 @@ stable_llms_ids = [llm.configured_llm_name for llm in stable_llms]
 @pytest.mark.parametrize("llm", llms, ids=llms_ids)
 def test_construction_1(llm):
     assert llm is not None
-    assert isinstance(llm, LlmBase)
-    assert llm.base_llm_name.endswith("Llm")
-
-
-@pytest.mark.parametrize("llm", llms, ids=llms_ids)
-def test_init_model(llm):
-    x = llm.init_model()
-    assert x is None
+    assert isinstance(llm, LlmProviderBase)
+    assert llm.llm_provider_name.endswith("Llm")
+    assert llm.configured_llm_name == llm.config.configured_llm_name
 
 
 @pytest.mark.parametrize("llm", llms, ids=llms_ids)
 def test_query_llm_basic(llm):
-    llm.init_model()
 
     prompt = LlmPrompt("What color is the sky?")
     response = llm.query_llm_basic(prompt)
@@ -81,7 +76,6 @@ def test_query_llm_basic(llm):
 
 @pytest.mark.parametrize("llm", stable_llms, ids=stable_llms_ids)
 def test_query_llm_basic_response_is_stable(llm):
-    llm.init_model()
 
     prompt = LlmPrompt("What color is the sky?")
     response1 = llm.query_llm_basic(prompt)
@@ -97,9 +91,6 @@ def test_query_llm_basic_response_is_stable(llm):
 
 @pytest.mark.parametrize("llm", llms, ids=llms_ids)
 def test_query_llm_chat(llm):
-
-    llm.init_model()
-
     prompt1 = LlmPrompt("What color is the sky?")
     chat_history = []
     response1 = llm.query_llm_chat(prompt1, chat_history)
@@ -132,7 +123,6 @@ def test_query_llm_chat__isolation(llm):
 
     Chat chain "A" should not affect chat chain "B".
     """
-    llm.init_model()
 
     # Chat chain "A", query 1
     prompt_A_1 = LlmPrompt("What color is the sky?")

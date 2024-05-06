@@ -34,7 +34,7 @@ def _get_system_environment_info() -> dict[str, dict[str, Any]]:
             "Git Branch": git_repo.active_branch.name,
             "Git Commit": git_repo.head.commit.hexsha,
             "Git Commit Message": git_repo.head.commit.message.strip(),
-            "Git Commit Time": git_repo.head.commit.committed_datetime,
+            "Git Commit Time": git_repo.head.commit.committed_datetime.isoformat(),
             "Git Commit Time Ago (HMS)": str(
                 datetime.now(timezone.utc) - git_repo.head.commit.committed_datetime
             ),
@@ -146,7 +146,7 @@ def get_all_env_info() -> dict[str, dict[str, Any]]:
     gpu_info = _get_gpu_env_info()
     env_info.update(gpu_info)
 
-    # TODO: tool versioning info (Iverilog/OSSCAD, PyPI packages, datasets, etc.)
+    # TODO: tool versioning info (Iverilog/OSS_CAD, PyPI packages, datasets, etc.)
 
     env_info["SLURM Info"] = _get_slurm_env_info()
 

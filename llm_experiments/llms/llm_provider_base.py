@@ -6,27 +6,21 @@ from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
 
-class LlmBase(abc.ABC):
-    def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        self.configured_llm_name: str = configured_llm_name
-        self.base_llm_name: str = self.__class__.__name__
-
-        self.config: LlmConfigBase = config
-
+class LlmProviderBase(abc.ABC):
+    def __init__(self):
+        # Note: super().__init__() must be called after self.config is set in the child class
+        self.llm_provider_name: str = self.__class__.__name__  # e.g. "OllamaLlm"
         self._is_initialized: bool = False
-
         self.model_metadata = {}
 
-    def __repr__(self) -> str:
-        return f"{self.base_llm_name}({self.configured_llm_name})"
+        assert isinstance(self.config, LlmConfigBase)
 
-    @abc.abstractmethod
-    def init_model(self) -> None:
-        """Prep the model for use right away.
-        May involve downloading the model's file, etc.
-        Method is stable, and can be called multiple times consecutively.
-        """
-        pass
+    def __repr__(self) -> str:
+        return f"{self.llm_provider_name}({self.config})"
+
+    @property
+    def configured_llm_name(self) -> str:
+        return self.config.configured_llm_name
 
     @abc.abstractmethod
     def destroy_model(self) -> None:

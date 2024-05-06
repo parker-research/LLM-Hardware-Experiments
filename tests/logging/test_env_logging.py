@@ -16,7 +16,13 @@ def test_get_all_env_info_is_stable():
             section: {
                 key: value
                 for key, value in values.items()
-                if key not in ["Current Local Time", "Current UTC Time"]
+                if key
+                not in [
+                    "Current Local Time",
+                    "Current UTC Time",
+                    "Git Commit Time Ago (HMS)",
+                    "Git Commit Time Ago (Minutes)",
+                ]
             }
             for section, values in env_info.items()
             if section != "Environment Variables"  # they tend to change a tiny bit

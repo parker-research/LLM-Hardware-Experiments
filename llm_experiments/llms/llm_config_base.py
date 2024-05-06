@@ -7,6 +7,7 @@ import yaml
 @dataclass(kw_only=True)
 class LlmConfigBase(abc.ABC):
     # most configuration dataclass variables go in child classes
+    configured_llm_name: str
     is_stable: bool = False  # indicates that the same input will always produce the same output
 
     def __post_init__(self):

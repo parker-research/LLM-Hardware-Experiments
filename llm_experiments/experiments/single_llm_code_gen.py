@@ -43,7 +43,7 @@ from llm_experiments.util.execute_cli import CommandResult
 from llm_experiments.experiments.common.simple_code_gen_problem import SimpleCodeGenProblem
 from llm_experiments.experiments.common.verilog_eval_problems import load_verilog_eval_problems
 
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig
 
@@ -64,7 +64,7 @@ iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
 
 def do_experiment(
-    llm: LlmBase,
+    llm: LlmProviderBase,
     problem: SimpleCodeGenProblem,
     working_dir: Path,
     logging_attributes: dict = {},
@@ -121,7 +121,7 @@ def do_experiment(
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
-        "base_llm_name": llm.base_llm_name,
+        "llm_provider_name": llm.llm_provider_name,
         "configured_llm_name": llm.configured_llm_name,
         "llm_configuration": orjson.dumps(llm.config.to_dict()).decode(),
         "problem_id": problem.problem_id,
@@ -258,7 +258,7 @@ def run_experiment_all_inputs():
 
     # LLM Setup
     # TODO: move this into a config file
-    llm_list: list[LlmBase] = [
+    llm_list: list[LlmProviderBase] = [
         MockLlm(
             "mock_llm_no_preprogrammed_responses",
             config=MockLlmConfig(
@@ -280,7 +280,7 @@ def run_experiment_all_inputs():
     ]
 
     for llm in llm_list:
-        llm.init_model()
+        llm._init_pull_model()
         logger.info(f"Initialized LLM: {llm}")
 
         for problem in problems:
@@ -347,7 +347,7 @@ def run_experiment_all_inputs():
         df.write_parquet(working_dir / "experiment_data.parquet")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
-        df_stats_1 = df.group_by(["base_llm_name", "configured_llm_name", "exit_stage"]).agg(
+        df_stats_1 = df.group_by(["llm_provider_name", "configured_llm_name", "exit_stage"]).agg(
             count=pl.len(),
         )
         df_stats_1 = df_stats_1.sort(df_stats_1.columns)

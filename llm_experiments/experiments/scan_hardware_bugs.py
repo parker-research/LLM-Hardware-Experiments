@@ -30,7 +30,7 @@ from llm_experiments.intermediate_steps.split_large_files import (  # noqa
 )
 from llm_experiments.intermediate_steps.line_numbering import add_line_numbers
 
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig  # noqa
 
@@ -49,7 +49,7 @@ from llm_experiments.llms.other.ollama_server import ollama_server_singleton
 
 
 def scan_file_for_bugs(
-    llm: LlmBase,
+    llm: LlmProviderBase,
     file_path: Path,
     working_dir: Path,
     logging_attributes: dict = {},
@@ -144,7 +144,7 @@ def scan_file_for_bugs(
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
         "experiment_execution_uuid": str(experiment_execution_uuid),
-        "base_llm_name": llm.base_llm_name,
+        "llm_provider_name": llm.llm_provider_name,
         "configured_llm_name": llm.configured_llm_name,
         "target_file_path": str(file_path),
         "target_file_name": file_path.name,
@@ -199,7 +199,7 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
 
     # LLM Setup
     # TODO: move this into a config file
-    llm_list: list[LlmBase] = [
+    llm_list: list[LlmProviderBase] = [
         OllamaLlm(
             llama_model_name.replace(":", "_"),
             config=OllamaLlmConfig(
@@ -212,7 +212,7 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
     logger.info(f"Found {len(target_files):,} target files to scan.")
 
     for llm in llm_list:
-        llm.init_model()
+        llm._init_pull_model()
         logger.info(f"Initialized LLM: {llm}")
 
         for target_file_path in target_files:
@@ -270,7 +270,7 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
         df.write_parquet(working_dir / "experiment_data.parquet")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
-        df_stats_1 = df.group_by(["base_llm_name", "configured_llm_name", "exit_stage"]).agg(
+        df_stats_1 = df.group_by(["llm_provider_name", "configured_llm_name", "exit_stage"]).agg(
             count=pl.len(),
         )
         df_stats_1 = df_stats_1.sort(df_stats_1.columns)

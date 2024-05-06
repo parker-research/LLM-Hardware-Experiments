@@ -3,7 +3,7 @@ from typing import Optional, Literal
 
 import openai
 
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 from llm_experiments.util.path_helpers import read_secrets_file
@@ -40,14 +40,13 @@ class ChatGptLlmConfig(LlmConfigBase):
         return options
 
 
-class ChatGptLlm(LlmBase):
-    def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        assert isinstance(config, LlmConfigBase)
+class ChatGptLlm(LlmProviderBase):
+    def __init__(self, config: ChatGptLlmConfig):
         assert isinstance(config, ChatGptLlmConfig)  # must be specifically THIS config class
+        self.config = config
 
-        super().__init__(configured_llm_name, config)
+        super().__init__()
 
-    def init_model(self) -> None:
         _api_key = read_secrets_file()["openai_api_key"]
         assert isinstance(_api_key, str)
         self._api_client = openai.OpenAI(api_key=_api_key)
@@ -121,18 +120,22 @@ def _convert_chat_history_to_openai_api_dict(
 
 chatgpt_good_configs: dict[str, ChatGptLlmConfig] = {
     "gpt-3.5-turbo-default": ChatGptLlmConfig(
+        configured_llm_name="gpt-3.5-turbo-default",
         model_name="gpt-3.5-turbo",
     ),
     "gpt-3.5-turbo-no_randomness": ChatGptLlmConfig(
+        configured_llm_name="gpt-3.5-turbo-no_randomness",
         # is_stable=True,
         model_name="gpt-3.5-turbo",
         option_seed=101,  # any fixed number is good
         option_temperature=0,
     ),
     "gpt-4-default": ChatGptLlmConfig(
+        configured_llm_name="gpt-4-default",
         model_name="gpt-4",
     ),
     "gpt-4-no_randomness": ChatGptLlmConfig(
+        configured_llm_name="gpt-4-no_randomness",
         # is_stable=True,
         model_name="gpt-4",
         option_seed=101,  # any fixed number is good

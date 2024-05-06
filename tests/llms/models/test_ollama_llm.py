@@ -9,26 +9,28 @@ from llm_experiments.llms.models.ollama_llm import (
 
 def test_construction_1():
     llm = OllamaLlm(
-        configured_llm_name="TinyLlama Default Config",
-        config=OllamaLlmConfig(model_name="tinyllama:1.1b"),
+        config=OllamaLlmConfig(
+            configured_llm_name="TinyLlama Default Config",
+            model_name="tinyllama:1.1b",
+        ),
     )
     assert llm is not None
     assert llm.configured_llm_name == "TinyLlama Default Config"
-    assert llm.base_llm_name == "OllamaLlm"
+    assert llm.llm_provider_name == "OllamaLlm"
     assert llm.config.model_name == "tinyllama:1.1b"
 
 
 def test_ollama_init_model():
     config = ollama_good_configs["tinyllama_no_randomness"]
-    llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
-    x = llm.init_model()
+    llm = OllamaLlm(config=config)
+    x = llm._init_pull_model()
     assert x is None
 
 
 def test_query_llm_basic():
     config = ollama_good_configs["tinyllama_no_randomness"]
-    llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
-    llm.init_model()
+    llm = OllamaLlm(config=config)
+    llm._init_pull_model()
 
     prompt = LlmPrompt("What color is the sky?")
     response = llm.query_llm_basic(prompt)
@@ -39,8 +41,8 @@ def test_query_llm_basic():
 
 def test_query_llm_basic_response_is_stable():
     config = ollama_good_configs["tinyllama_no_randomness"]
-    llm = OllamaLlm(configured_llm_name="tinyllama_no_randomness", config=config)
-    llm.init_model()
+    llm = OllamaLlm(config=config)
+    llm._init_pull_model()
 
     prompt = LlmPrompt("What color is the sky?")
     response1 = llm.query_llm_basic(prompt)
@@ -57,8 +59,8 @@ def test_query_llm_basic_response_is_stable():
 def test_query_llm_chat():
     # NOTE: this test doesn't work with tinyllama_no_randomness
     config = ollama_good_configs["llama2_7b_no_randomness"]
-    llm = OllamaLlm(configured_llm_name="llama2_7b_no_randomness", config=config)
-    llm.init_model()
+    llm = OllamaLlm(config=config)
+    llm._init_pull_model()
 
     prompt1 = LlmPrompt("What color is the sky?")
     chat_history = []
@@ -93,8 +95,8 @@ def test_query_llm_chat__isolation():
     """
     # NOTE: this test doesn't work with tinyllama_no_randomness
     config = ollama_good_configs["llama2_7b_no_randomness"]
-    llm = OllamaLlm(configured_llm_name="llama2_7b_no_randomness", config=config)
-    llm.init_model()
+    llm = OllamaLlm(config=config)
+    llm._init_pull_model()
 
     # Chat chain "A", query 1
     prompt_A_1 = LlmPrompt("What color is the sky?")

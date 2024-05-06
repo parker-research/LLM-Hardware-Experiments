@@ -8,12 +8,14 @@ from llm_experiments.llms.models.chatgpt_llm import (
 
 def test_construction_1():
     llm = ChatGptLlm(
-        configured_llm_name="ChatGPT 3.5 Turbo (Default Config)",
-        config=ChatGptLlmConfig(model_name="gpt-3.5-turbo"),
+        config=ChatGptLlmConfig(
+            configured_llm_name="ChatGPT 3.5 Turbo (Default Config)",
+            model_name="gpt-3.5-turbo",
+        ),
     )
     assert llm is not None
     assert llm.configured_llm_name == "ChatGPT 3.5 Turbo (Default Config)"
-    assert llm.base_llm_name == "ChatGptLlm"
+    assert llm.llm_provider_name == "ChatGptLlm"
     assert llm.config.model_name == "gpt-3.5-turbo"
 
 

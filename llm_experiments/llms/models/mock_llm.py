@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 import time
 
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
@@ -22,21 +22,19 @@ class MockLlmConfig(LlmConfigBase):
         assert isinstance(self.response_delay_seconds, (float, int))
 
 
-class MockLlm(LlmBase):
+class MockLlm(LlmProviderBase):
     """A mock LLM that responds to test queries and provides a simple response to other queries.
     This LLM is implemented exactly as all real LLMs are: using complex chains of if-statements
         and regular expressions. /j
     """
 
-    def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        assert isinstance(config, LlmConfigBase)
-        assert isinstance(config, MockLlmConfig)  # must be specifically THIS config class
+    def __init__(self, config: MockLlmConfig):
+        assert isinstance(config, MockLlmConfig)
+        self.config = config
 
-        super().__init__(configured_llm_name, config)
+        super().__init__()
 
-    def init_model(self) -> None:
         self._is_initialized = True
-        return None
 
     def destroy_model(self) -> None:
         self._is_initialized = False
@@ -89,9 +87,11 @@ class MockLlm(LlmBase):
 
 mock_llm_good_configs: dict[str, MockLlmConfig] = {
     "mock_llm_with_preprogrammed_responses": MockLlmConfig(
+        configured_llm_name="mock_llm_with_preprogrammed_responses",
         does_respond_to_test_queries=True,
     ),
     "mock_llm_no_preprogrammed_responses": MockLlmConfig(
+        configured_llm_name="mock_llm_no_preprogrammed_responses",
         does_respond_to_test_queries=False,
     ),
 }

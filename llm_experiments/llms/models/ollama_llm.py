@@ -11,7 +11,7 @@ import json
 from llm_experiments.util.path_helpers import get_folder_total_size
 from llm_experiments.logging.presenters import flatten_dict
 
-from llm_experiments.llms.llm_base import LlmBase
+from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
@@ -51,22 +51,27 @@ class OllamaLlmConfig(LlmConfigBase):
         return options
 
 
-class OllamaLlm(LlmBase):
-    def __init__(self, configured_llm_name: str, config: LlmConfigBase):
-        assert isinstance(config, LlmConfigBase)
+class OllamaLlm(LlmProviderBase):
+    def __init__(self, config: LlmConfigBase):
         assert isinstance(config, OllamaLlmConfig)  # must be specifically THIS config class
-        assert isinstance(config.model_name, str)
+        self.config = config
 
-        super().__init__(configured_llm_name, config)
+        super().__init__()
 
         # extract the parameter count
-        param_count_match = re.search(r"(?P<param_count_billions>\d+(\.\d+)?)b", config.model_name)
+        param_count_match = re.search(
+            r"(?P<param_count_billions>\d+(\.\d+)?)b", self.config.model_name
+        )
         if param_count_match:
             self.model_metadata["parameter_count_billions"] = float(
                 param_count_match.group("param_count_billions")
             )
         else:
-            raise ValueError(f"Could not find parameter count in model_name: {config.model_name}")
+            raise ValueError(
+                f"Could not find parameter count in model_name: {self.config.model_name}"
+            )
+
+        self._init_pull_model()
 
     @staticmethod
     def _list_local_models() -> list[dict]:
@@ -83,7 +88,7 @@ class OllamaLlm(LlmBase):
         max_tries=3,
         on_backoff=lambda x: logger.info(f"Retrying Ollama pull ({x})..."),
     )
-    def init_model(self) -> None:
+    def _init_pull_model(self) -> None:
         ollama_server_singleton.start()
 
         # Check if the model is already local, and if so, skip the download.
@@ -214,11 +219,13 @@ def _convert_chat_history_to_ollama_api_dict(
 
 ollama_good_configs: dict[str, OllamaLlmConfig] = {
     "tinyllama_no_randomness": OllamaLlmConfig(
+        configured_llm_name="tinyllama_no_randomness",
         model_name="tinyllama:1.1b",
         option_seed=9865,  # any fixed number is good
         option_temperature=0,
     ),
     "llama2_7b_no_randomness": OllamaLlmConfig(
+        configured_llm_name="llama2_7b_no_randomness",
         model_name="llama2:7b",
         option_seed=101,  # any fixed number is good
         option_temperature=0,
