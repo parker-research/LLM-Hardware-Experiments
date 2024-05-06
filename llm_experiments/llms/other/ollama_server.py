@@ -169,7 +169,7 @@ class _OllamaServer:
     def _get_ollama_version(self) -> str | None:
         command_result = run_command([str(self._ollama_executable_path), "--version"])
 
-        assert command_result.return_code == 0
+        assert command_result.return_code == 0, f"Error getting Ollama version: {command_result}"
 
         version_num_match: str = re.search(
             r"version is (?P<version_num>(\d+\.?)+)", command_result.stdout, re.IGNORECASE

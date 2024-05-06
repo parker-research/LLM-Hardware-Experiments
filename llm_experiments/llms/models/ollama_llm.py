@@ -75,6 +75,7 @@ class OllamaLlm(LlmProviderBase):
                 f"Could not find parameter count in model_name: {self.config.model_name}"
             )
 
+        start_ollama_server()
         self._init_pull_model()
 
     @staticmethod
@@ -93,8 +94,6 @@ class OllamaLlm(LlmProviderBase):
         on_backoff=lambda x: logger.info(f"Retrying Ollama pull ({x})..."),
     )
     def _init_pull_model(self) -> None:
-        start_ollama_server()
-
         # Check if the model is already local, and if so, skip the download.
         local_models = self._list_local_models()
         if self.config.model_name in [model["name"] for model in local_models]:
