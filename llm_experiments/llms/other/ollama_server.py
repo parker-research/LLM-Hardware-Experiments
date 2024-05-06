@@ -167,6 +167,9 @@ class _OllamaServer:
         logger.info(f"Ollama version: {self._get_ollama_version()}")
 
     def _get_ollama_version(self) -> str | None:
+        # ensure Ollama is downloaded
+        self._download_ollama()
+
         command_result = run_command([str(self._ollama_executable_path), "--version"])
 
         assert command_result.return_code == 0, f"Error getting Ollama version: {command_result}"
