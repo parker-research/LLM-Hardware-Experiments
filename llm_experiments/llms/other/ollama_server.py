@@ -22,7 +22,8 @@ _ollama_server_singleton = None
 
 def start_ollama_server(log_file_path: Path | None = None):
     global _ollama_server_singleton
-    _ollama_server_singleton = _OllamaServer()
+    if _ollama_server_singleton is None:
+        _ollama_server_singleton = _OllamaServer()
     if log_file_path is not None:
         _ollama_server_singleton.set_log_file_path(log_file_path)
     _ollama_server_singleton.start()
