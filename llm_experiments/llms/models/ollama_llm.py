@@ -8,14 +8,18 @@ import ollama
 import re
 import json
 
-from llm_experiments.util.path_helpers import get_folder_total_size
+
 from llm_experiments.logging.presenters import flatten_dict
 
 from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
 
-from llm_experiments.llms.other.ollama_server import ollama_server_singleton
+from llm_experiments.llms.other.ollama_server import (
+    start_ollama_server,
+    stop_ollama_server,
+    get_ollama_folder_size_bytes,
+)
 
 
 @dataclass(kw_only=True)
@@ -89,7 +93,7 @@ class OllamaLlm(LlmProviderBase):
         on_backoff=lambda x: logger.info(f"Retrying Ollama pull ({x})..."),
     )
     def _init_pull_model(self) -> None:
-        ollama_server_singleton.start()
+        start_ollama_server()
 
         # Check if the model is already local, and if so, skip the download.
         local_models = self._list_local_models()
@@ -115,9 +119,7 @@ class OllamaLlm(LlmProviderBase):
                     progress_bar.refresh()
 
         model_size_GiB = self.get_model_metadata()["size"] / (1024**3)
-        storage_folder_size_GiB = get_folder_total_size(
-            ollama_server_singleton._ollama_model_data_store_path
-        ) / (1024**3)
+        storage_folder_size_GiB = get_ollama_folder_size_bytes() / (1024**3)
         logger.info(
             f"Downloaded Ollama model: {self.config.model_name}. "
             f"This model size: {model_size_GiB:.2f} GiB. "
@@ -138,7 +140,7 @@ class OllamaLlm(LlmProviderBase):
 
     def destroy_model(self) -> None:
         ollama.delete(self.config.model_name)
-        ollama_server_singleton.stop()
+        stop_ollama_server()
         self._is_initialized = False
 
     def check_is_connectable(self) -> bool:

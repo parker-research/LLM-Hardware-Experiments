@@ -8,12 +8,52 @@ from pathlib import Path
 
 from loguru import logger
 
-from llm_experiments.util.path_helpers import make_data_dir, get_file_date_str
+from llm_experiments.util.path_helpers import (
+    make_data_dir,
+    get_file_date_str,
+    get_folder_total_size,
+)
 from llm_experiments.util.download_helpers import download_large_file
 from llm_experiments.util.execute_cli import run_command
 
 
-class OllamaServer:
+_ollama_server_singleton = None
+
+
+def start_ollama_server(log_file_path: Path | None = None):
+    global _ollama_server_singleton
+    _ollama_server_singleton = _OllamaServer()
+    if log_file_path is not None:
+        _ollama_server_singleton.set_log_file_path(log_file_path)
+    _ollama_server_singleton.start()
+
+
+def set_ollama_server_log_file_path(log_file_path: Path):
+    global _ollama_server_singleton
+    if _ollama_server_singleton is None:
+        logger.warning("Ollama server not started yet.")
+    else:
+        _ollama_server_singleton.set_log_file_path(log_file_path)
+
+
+def stop_ollama_server():
+    global _ollama_server_singleton
+    if _ollama_server_singleton is None:
+        logger.warning("Ollama server not started yet.")
+    else:
+        _ollama_server_singleton.stop()
+
+
+def get_ollama_folder_size_bytes() -> int | None:
+    global _ollama_server_singleton
+    if _ollama_server_singleton is None:
+        logger.warning("Ollama server not started yet.")
+        return None
+    else:
+        return get_folder_total_size(_ollama_server_singleton._ollama_model_data_store_path)
+
+
+class _OllamaServer:
     def __init__(self, log_file_path: Path | None = None):
         self.process = None
         self.log_file_path = log_file_path
@@ -142,10 +182,7 @@ class OllamaServer:
             return version_num_match.group("version_num")
 
 
-ollama_server_singleton = OllamaServer()
-
-
 if __name__ == "__main__":
-    ollama_server_singleton.start()
+    start_ollama_server()
     input("Press Enter to stop the server...")
-    ollama_server_singleton.stop()
+    stop_ollama_server()

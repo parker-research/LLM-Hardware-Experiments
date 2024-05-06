@@ -58,7 +58,7 @@ from llm_experiments.llms.models.chatgpt_llm import (  # noqa
     ChatGptLlmConfig,
     chatgpt_good_configs,
 )
-from llm_experiments.llms.other.ollama_server import ollama_server_singleton
+from llm_experiments.llms.other.ollama_server import set_ollama_server_log_file_path
 
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
@@ -228,7 +228,7 @@ def run_experiment_all_inputs():
         append_date=False,
     )
     logger.info(f"Working directory: {working_dir}")
-    ollama_server_singleton.set_log_file_path(working_dir / "ollama_serve.log")
+    set_ollama_server_log_file_path(working_dir / "ollama_serve.log")
 
     # Experiment Setup/Logging
     logger.add(working_dir / "general_log.log")
