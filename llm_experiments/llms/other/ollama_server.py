@@ -152,12 +152,14 @@ class _OllamaServer:
             logger.info("Closed 'ollama serve' log file.")
 
     def _download_ollama(self) -> None:
+        temp_download_file_path = self._ollama_executable_path.with_suffix(".tmp_download")
         if not self._ollama_executable_path.is_file():
             logger.info("Downloading Ollama...")
             download_large_file(
                 "https://ollama.com/download/ollama-linux-amd64",
-                self._ollama_executable_path,
+                temp_download_file_path,
             )
+            temp_download_file_path.rename(self._ollama_executable_path)
             logger.info(f"Downloaded Ollama to {self._ollama_executable_path}")
 
         else:
