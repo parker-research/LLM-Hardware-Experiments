@@ -11,8 +11,11 @@ from llm_experiments.llms.models.ollama_llm import OllamaLlm, OllamaLlmConfig
 
 def pull_ollama_model(model_name: str) -> None:
     logger.info(f"🏁 Pulling model: {model_name}")
-    config = OllamaLlmConfig(model_name=model_name)
-    llm = OllamaLlm("ollama", config)
+    config = OllamaLlmConfig(
+        configured_llm_name=f"ollama_{model_name.replace(':', '_')}_pull",
+        model_name=model_name,
+    )
+    llm = OllamaLlm(config)
 
     logger.info(f"🎬 Model {model_name} is ready to use: {llm}")
 
