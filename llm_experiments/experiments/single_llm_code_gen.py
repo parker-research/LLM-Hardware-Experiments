@@ -20,10 +20,12 @@ import uuid
 from datetime import datetime
 import traceback
 import re
+import shutil
 
 import orjson
 from loguru import logger
 import polars as pl
+import fire
 
 from llm_experiments.logging.env_logging import (
     get_all_env_info,
@@ -45,7 +47,10 @@ from llm_experiments.experiments.common.verilog_eval_problems import load_verilo
 
 from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
-from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig
+
+from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_config_file
+
+from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig  # noqa
 
 # LLM Models
 from llm_experiments.llms.models.ollama_llm import (  # noqa
@@ -213,7 +218,7 @@ def do_experiment(
     return experiment_data
 
 
-def run_experiment_all_inputs():
+def run_experiment_all_inputs(llm_config_file_path: str | Path):
     logger.info("Starting simple single code generation experiment.")
 
     experiment_group_start_timestamp = datetime.now()
@@ -257,27 +262,11 @@ def run_experiment_all_inputs():
     experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
 
     # LLM Setup
-    # TODO: move this into a config file
-    llm_list: list[LlmProviderBase] = [
-        MockLlm(
-            "mock_llm_no_preprogrammed_responses",
-            config=MockLlmConfig(
-                does_respond_to_test_queries=False,
-            ),
-        ),
-        # ChatGptLlm(
-        #     "gpt-3.5-turbo-no_randomness",
-        #     config=chatgpt_good_configs["gpt-3.5-turbo-no_randomness"],
-        # ),
-        OllamaLlm(
-            "llama2_7b_no_randomness",
-            config=ollama_good_configs["llama2_7b_no_randomness"],
-        ),
-        OllamaLlm(
-            "tinyllama_no_randomness",
-            config=ollama_good_configs["tinyllama_no_randomness"],
-        ),
-    ]
+    shutil.copy(llm_config_file_path, working_dir / "llm_config.yaml")
+    llm_list: list[LlmProviderBase] = make_llm_providers_from_yaml_config_file(
+        llm_config_file_path
+    )
+    logger.info(f"Loaded {len(llm_list):,} LLMs: {llm_list}")
 
     for llm in llm_list:
         llm._init_pull_model()
@@ -357,4 +346,4 @@ def run_experiment_all_inputs():
 
 
 if __name__ == "__main__":
-    run_experiment_all_inputs()
+    fire.Fire(run_experiment_all_inputs)

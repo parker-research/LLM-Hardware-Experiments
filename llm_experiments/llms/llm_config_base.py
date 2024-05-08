@@ -34,6 +34,12 @@ class LlmConfigBase(abc.ABC):
 
     @classmethod
     def from_dict(cls, config_dict: dict):
+        if "llm_class" in config_dict:
+            assert (
+                cls.__name__ == config_dict["llm_class"] + "Config"
+            ), f"Expected {cls.__name__}, got {config_dict['llm_class']}(+Config)"
+            del config_dict["llm_class"]
+
         return cls(**config_dict)
 
     @classmethod
