@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 import time
 from pathlib import Path
+import uuid
 
 from loguru import logger
 
@@ -152,8 +153,11 @@ class _OllamaServer:
             logger.info("Closed 'ollama serve' log file.")
 
     def _download_ollama(self) -> None:
-        temp_download_file_path = self._ollama_executable_path.with_suffix(".tmp_download")
+        temp_download_file_path = self._ollama_executable_path.with_suffix(
+            f".tmp_download_{uuid.uuid4()}"
+        )
         if not self._ollama_executable_path.is_file():
+            # TODO: refactor temp file deal into download_large_file
             logger.info("Downloading Ollama...")
             download_large_file(
                 "https://ollama.com/download/ollama-linux-amd64",

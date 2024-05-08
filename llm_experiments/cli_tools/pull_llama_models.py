@@ -13,9 +13,8 @@ def pull_ollama_model(model_name: str) -> None:
     logger.info(f"🏁 Pulling model: {model_name}")
     config = OllamaLlmConfig(model_name=model_name)
     llm = OllamaLlm("ollama", config)
-    llm._init_pull_model()
 
-    logger.info(f"🎬 Model {model_name} is ready to use.")
+    logger.info(f"🎬 Model {model_name} is ready to use: {llm}")
 
 
 def main_cli():

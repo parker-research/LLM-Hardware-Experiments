@@ -233,7 +233,6 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path):
         append_date=False,
     )
     logger.info(f"Working directory: {working_dir}")
-    set_ollama_server_log_file_path(working_dir / "ollama_serve.log")
 
     # Experiment Setup/Logging
     logger.add(working_dir / "general_log.log")
@@ -246,6 +245,17 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path):
     # Tool Setup
     iverilog_tool.install_and_init_tool()
     iverilog_tool.assert_is_usable()
+
+    # LLM Setup
+    shutil.copy(llm_config_file_path, working_dir / "llm_config.yaml")
+    llm_list: list[LlmProviderBase] = make_llm_providers_from_yaml_config_file(
+        llm_config_file_path
+    )
+    logger.info(f"Loaded {len(llm_list):,} LLMs: {llm_list}")
+    if any(isinstance(llm, OllamaLlm) for llm in llm_list):
+        set_ollama_server_log_file_path(working_dir / "ollama_serve.log")
+    else:
+        logger.info("No Ollama LLMs found in the list.")
 
     # Problems
     problems = load_verilog_eval_problems()
@@ -261,16 +271,8 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path):
 
     experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
 
-    # LLM Setup
-    shutil.copy(llm_config_file_path, working_dir / "llm_config.yaml")
-    llm_list: list[LlmProviderBase] = make_llm_providers_from_yaml_config_file(
-        llm_config_file_path
-    )
-    logger.info(f"Loaded {len(llm_list):,} LLMs: {llm_list}")
-
     for llm in llm_list:
-        llm._init_pull_model()
-        logger.info(f"Initialized LLM: {llm}")
+        logger.info(f"Using LLM: {llm}")
 
         for problem in problems:
             logger.info(f"Running experiment for {llm=}, {problem=}")

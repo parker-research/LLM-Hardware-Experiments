@@ -212,8 +212,7 @@ def run_scanner_as_experiment(project_dir_to_scan: Path | str, llama_model_name:
     logger.info(f"Found {len(target_files):,} target files to scan.")
 
     for llm in llm_list:
-        llm._init_pull_model()
-        logger.info(f"Initialized LLM: {llm}")
+        logger.info(f"Using LLM: {llm}")
 
         for target_file_path in target_files:
             logger.info(f"Running experiment for {llm=}, {target_file_path=}")
