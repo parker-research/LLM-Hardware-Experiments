@@ -116,6 +116,9 @@ class OllamaLlm(LlmProviderBase):
                     progress_bar.total = stream_status["total"]
                 if ("completed" in stream_status) or ("total" in stream_status):
                     progress_bar.refresh()
+                if "done" in stream_status and stream_status["done"]:
+                    logger.info(f"Downloaded Ollama model: {self.config.model_name}")
+                    break
 
         model_size_GiB = self.get_model_metadata()["size"] / (1024**3)
         storage_folder_size_GiB = get_ollama_folder_size_bytes() / (1024**3)
