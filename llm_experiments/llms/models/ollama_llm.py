@@ -110,18 +110,12 @@ class OllamaLlm(LlmProviderBase):
         ) as progress_bar:
             for stream_status in ollama.pull(self.config.model_name, stream=True):
                 # Docs: https://github.com/ollama/ollama/blob/main/docs/api.md#response-19
-                if "progress" in stream_status:
-                    progress_bar.n = stream_status["progress"]
+                if "completed" in stream_status:
+                    progress_bar.n = stream_status["completed"]
                 if "total" in stream_status:
                     progress_bar.total = stream_status["total"]
-                if (
-                    ("progress" in stream_status)
-                    or ("total" in stream_status)
-                    or ("completed" in stream_status)
-                ):
+                if ("completed" in stream_status) or ("total" in stream_status):
                     progress_bar.refresh()
-                # TODO: remove once we confirm the format
-                logger.debug(f"Ollama pull status: {stream_status}")
 
         model_size_GiB = self.get_model_metadata()["size"] / (1024**3)
         storage_folder_size_GiB = get_ollama_folder_size_bytes() / (1024**3)
