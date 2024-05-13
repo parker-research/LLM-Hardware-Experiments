@@ -272,7 +272,7 @@ def do_cycle(
     cycle_log_data["testbench_stats"] = tb_result["testbench_stats"]
 
     if not tb_result["was_testbench_passed"]:
-        cycle_log_data["exit_stage"] = "tb_failed"
+        cycle_log_data["exit_stage"] = "60_tb_failed"
         experiment_state_store.phase = "retry"
         experiment_state_store.next_prompt_text = generate_next_prompt_text_after_fail(
             extract_code_worked=True,
@@ -285,7 +285,7 @@ def do_cycle(
         return cycle_log_data
 
     # FINALLY
-    cycle_log_data["exit_stage"] = "tb_passed"
+    cycle_log_data["exit_stage"] = "80_tb_passed"
     experiment_state_store.has_success = True
     return cycle_log_data
 
@@ -375,7 +375,7 @@ def do_experiment(
         experiment_data["used_cycle_count"] = cycle_num + 1
         experiment_data["latest_exit_stage"] = cycle_log_data["exit_stage"]
 
-        if cycle_log_data["exit_stage"] == "tb_passed":
+        if cycle_log_data["exit_stage"] == "80_tb_passed":
             experiment_data["was_testbench_passed"] = True
             break
 
