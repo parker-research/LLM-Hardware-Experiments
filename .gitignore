@@ -5,7 +5,7 @@
 # Working Data Folders
 working/
 secrets.yaml
-llm_config.yaml
+cfg_*.yaml
 
 
 # Log and data output files

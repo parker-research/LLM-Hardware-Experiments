@@ -36,6 +36,7 @@ from llm_experiments.logging.env_logging import (
     write_env_info_to_json_file,
 )
 from llm_experiments.logging.presenters import filter_keys_in_dict
+from llm_experiments.logging.data_manipulation import merge_jsonl_to_parquet
 from llm_experiments.util.path_helpers import (
     make_data_dir,
     get_file_date_str,
@@ -466,7 +467,7 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
                     "experiment_group_start_timestamp": experiment_group_start_timestamp,
                     "problem_id": problem.problem_id,
                     "problem_description": problem.problem_description,
-                    "exit_stage": "exception",
+                    "latest_exit_stage": "exception",
                     "was_testbench_passed": False,
                     "error": str(e),
                 }
@@ -484,9 +485,7 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
                 experiment_data,
                 [
                     "problem_id",
-                    "exit_stage",
-                    "was_compile_success",
-                    "was_execute_success",
+                    "latest_exit_stage",
                     "was_testbench_passed",
                 ],
             )
@@ -501,28 +500,45 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
         f"Final global stats: {orjson.dumps(global_stats, option=orjson.OPT_INDENT_2).decode()}"
     )
 
+    prep_end_of_experiment_summary_stats(working_dir)
+
+    logger.info("Done.")
+
+
+def prep_end_of_experiment_summary_stats(working_dir: Path):
+    """Prepares the end of experiment summary stats.
+
+    Reads the experiment_data.jsonl file, and prepares the summary stats into
+    `working_dir / 'summary' / '*.pq'`.
+    """
+
+    logger.info("Making end of experiment summary stats...")
+    experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
+
     merge_jsonl_to_parquet(experiment_data_jsonl_path)
 
+    (summary_dir := working_dir / "summary").mkdir(parents=True, exist_ok=True)
+
+    # Make Summary 1
     df = pl.read_parquet(experiment_data_jsonl_path.with_suffix(".pq"))
-    df_stats_1 = df.group_by(["llm_provider_name", "configured_llm_name", "exit_stage"]).agg(
+    df_stats_1 = df.group_by(
+        ["llm_provider_name", "configured_llm_name", "latest_exit_stage"]
+    ).agg(
         count=pl.len(),
     )
     df_stats_1 = df_stats_1.sort(df_stats_1.columns)
     logger.info(f"Experiment data stats (by exit_stage): {df_stats_1}")
-    df_stats_1.write_parquet(working_dir / "experiment_summary_type_1.pq")
+    df_stats_1.write_parquet(summary_dir / "experiment_summary_type_1.pq")
 
-
-def merge_jsonl_to_parquet(jsonl_path: Path, ext: Literal[".pq", ".parquet"] = ".pq") -> None:
-    """Merges the JSONL file into a Parquet file, at the same place as the .jsonl file."""
-    # merge the .jsonl file into a parquet file
-    if not jsonl_path.is_file():
-        raise FileNotFoundError(f"File not found: {jsonl_path}")
-
-    dest_pq_file_path = jsonl_path.with_suffix(ext)
-
-    df = pl.read_ndjson(jsonl_path)
-    df.write_parquet(dest_pq_file_path)
-    logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
+    # Make Summary 2 (Pivot)
+    df_stats_2 = df_stats_1.pivot(
+        index=["llm_provider_name", "configured_llm_name"],
+        columns=["latest_exit_stage"],
+        values="count",
+        sort_columns=True,
+    ).select(pl.all().fill_null(pl.lit(0)))
+    logger.info(f"Experiment data stats (by exit_stage): {df_stats_2}")
+    df_stats_2.write_parquet(summary_dir / "experiment_summary_type_2.pq")
 
 
 if __name__ == "__main__":
