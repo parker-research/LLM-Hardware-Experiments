@@ -5,11 +5,12 @@
 # Working Data Folders
 working/
 secrets.yaml
-
+llm_config.yaml
 
 
 # Log and data output files
 *.parquet
+*.pq
 *.sqlite3
 *.sqlite
 *.duckdb

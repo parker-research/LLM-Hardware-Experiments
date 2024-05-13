@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm_experiments"
+version = "0.0.1"
+authors = [
+  { name="parker-research", email="author@example.com" },
+]
+description = "A small example package"
+readme = "README.md"
+license = "Unlicense"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Unlicense",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/parker-research/LLM-Hardware-Experiments"
+Issues = "https://github.com/parker-research/LLM-Hardware-Experiments/issues"

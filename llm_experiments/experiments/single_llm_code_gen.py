@@ -47,22 +47,9 @@ from llm_experiments.experiments.common.verilog_eval_problems import load_verilo
 
 from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_types import LlmPrompt, LlmResponse
+from llm_experiments.llms.models.ollama_llm import OllamaLlm
 
 from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_config_file
-
-from llm_experiments.llms.models.mock_llm import MockLlm, MockLlmConfig  # noqa
-
-# LLM Models
-from llm_experiments.llms.models.ollama_llm import (  # noqa
-    OllamaLlm,
-    OllamaLlmConfig,
-    ollama_good_configs,
-)
-from llm_experiments.llms.models.chatgpt_llm import (  # noqa
-    ChatGptLlm,
-    ChatGptLlmConfig,
-    chatgpt_good_configs,
-)
 from llm_experiments.llms.other.ollama_server import set_ollama_server_log_file_path
 
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
@@ -335,7 +322,7 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path):
     # merge the .jsonl file into a parquet file
     if experiment_data_jsonl_path.is_file():
         df = pl.read_ndjson(experiment_data_jsonl_path)
-        df.write_parquet(working_dir / "experiment_data.parquet")
+        df.write_parquet(working_dir / "experiment_data.pq")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
         df_stats_1 = df.group_by(["llm_provider_name", "configured_llm_name", "exit_stage"]).agg(

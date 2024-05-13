@@ -262,7 +262,7 @@ def run_experiment_all_inputs():
     # merge the .jsonl file into a parquet file
     if experiment_data_jsonl_path.is_file():
         df = pl.read_ndjson(experiment_data_jsonl_path)
-        df.write_parquet(working_dir / "experiment_data.parquet")
+        df.write_parquet(working_dir / "experiment_data.pq")
         logger.info(f"Saved experiment data from JSONL to Parquet: {len(df):,} rows.")
 
         df_stats_1 = df.group_by(["exit_stage"]).agg(count=pl.len())
