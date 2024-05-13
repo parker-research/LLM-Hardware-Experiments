@@ -12,7 +12,7 @@ The experiment is as follows:
     4. Run the code through IVerilog to check if it builds.
     5. Run the code through IVerilog+vvp to run it, with the test bench.
     6. Check the testbench output to see if it passed.
-    7. Collect data on the results.
+    7. If it didn't pass, provide feedback to the LLM and repeat the process.
 3. Save the experiment data to a file.
 """
 
@@ -28,6 +28,7 @@ import orjson
 from loguru import logger
 import polars as pl
 import fire
+from tqdm import tqdm
 
 from llm_experiments.logging.env_logging import (
     get_all_env_info,
@@ -56,6 +57,7 @@ from llm_experiments.llms.models.ollama_llm import OllamaLlm
 
 from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_config_file
 from llm_experiments.llms.other.ollama_server import set_ollama_server_log_file_path
+from llm_experiments.util.strip_paths import STRIP_PATHS_START_FOLDER_NAME
 
 iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
 
@@ -115,7 +117,7 @@ def generate_next_prompt_text_after_fail(
 
     text_parts = [
         "Your solution is not quite right.",
-        f"It failed at this step: {failure_stage_desc_verb}",
+        f"It failed at this step: {failure_stage_desc_verb}.",
     ]
 
     if not extract_code_worked:
@@ -158,7 +160,7 @@ def do_cycle(
     cycle_uuid = uuid.uuid4()
 
     (cycle_llm_dir := cycle_save_dir / "llm").mkdir(parents=True)
-    (cycle_iverilog_dir := cycle_save_dir / "iverilog").mkdir(parents=True)
+    (cycle_iverilog_dir := cycle_save_dir / STRIP_PATHS_START_FOLDER_NAME).mkdir(parents=True)
 
     # Step 1: Prompt the LLM
     assert experiment_state_store.next_prompt_text is not None
@@ -221,6 +223,8 @@ def do_cycle(
         return cycle_log_data
 
     # Step 3: Save the code to a file
+    # Add timescale to fix IVerilog warning
+    attempted_solution_code = "`timescale 1 ps/1 ps\n\n" + attempted_solution_code + "\n"
     verilog_solution_file_path = cycle_iverilog_dir / "attempted_solution_code.sv"
     verilog_solution_file_path.write_text(attempted_solution_code)
 
@@ -343,7 +347,7 @@ def do_experiment(
     experiment_state_store = ExperimentStateStore(next_prompt_text=initial_llm_prompt_text)
 
     for cycle_num in range(0, max_cycles):
-        (cycle_save_dir := experiment_save_dir / f"cycle_{cycle_num:03}").mkdir(parents=True)
+        (cycle_save_dir := experiment_save_dir / f"cycle_{cycle_num:02}").mkdir(parents=True)
 
         (cycle_save_dir / "experiment_state_entry.json").write_bytes(
             orjson.dumps(experiment_state_store.to_dict(), option=orjson.OPT_INDENT_2)
@@ -356,7 +360,7 @@ def do_experiment(
             experiment_state_store=experiment_state_store,
             experiment_execution_uuid=experiment_execution_uuid,
         )
-        logger.info(f"Cycle {cycle_num:03}: {cycle_log_data['exit_stage']}")
+        logger.info(f"Cycle {cycle_num:02}: {cycle_log_data['exit_stage']}")
 
         # Save the cycle data
         (cycle_save_dir / "cycle_log.json").write_bytes(
@@ -380,7 +384,7 @@ def do_experiment(
     return experiment_data
 
 
-def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int = 5):
+def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int = 5) -> None:
     logger.info("Starting simple single code generation experiment.")
 
     experiment_group_start_timestamp = datetime.now()
@@ -433,10 +437,12 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
 
     experiment_data_jsonl_path = working_dir / "experiment_data.jsonl"
 
-    for llm in llm_list:
+    for llm_num, llm in enumerate(llm_list, start=1):
         logger.info(f"Using LLM: {llm}")
 
-        for problem in problems:
+        for problem in tqdm(
+            problems, desc=f"Solving problems with LLM #{llm_num}/{len(llm_list)}", unit="problem"
+        ):
             logger.info(f"Running experiment for {llm=}, {problem=}")
             global_stats["total_experiment_count"] += 1
 
@@ -503,6 +509,7 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
     )
     df_stats_1 = df_stats_1.sort(df_stats_1.columns)
     logger.info(f"Experiment data stats (by exit_stage): {df_stats_1}")
+    df_stats_1.write_parquet(working_dir / "experiment_summary_type_1.pq")
 
 
 def merge_jsonl_to_parquet(jsonl_path: Path, ext: Literal[".pq", ".parquet"] = ".pq") -> None:

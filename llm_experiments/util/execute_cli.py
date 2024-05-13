@@ -55,6 +55,8 @@ class CommandResult:
         if self.return_code != 0:
             text_parts[0] += " (failed)"
             # TODO: check if we can include more detail in the response with the return code
+        else:
+            text_parts[0] += " (success)"
 
         if self.stdout:
             text_parts.append("Command stdout:\n" + self.clean_stdout)
