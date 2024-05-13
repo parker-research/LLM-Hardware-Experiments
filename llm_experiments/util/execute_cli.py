@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
+from llm_experiments.util.strip_paths import strip_paths_from_text
+
 # Tools for executing external CLI tools (e.g., verilator, iverilog, etc.).
 
 
@@ -37,6 +39,29 @@ class CommandResult:
             f"{self.command_step_name}_result_stderr": (self.stderr),
             f"was_{self.command_step_name}_success": (self.return_code == 0),
         }
+
+    @property
+    def clean_stdout(self) -> str:
+        return strip_paths_from_text(self.stdout)
+
+    @property
+    def clean_stderr(self) -> str:
+        return strip_paths_from_text(self.stderr)
+
+    def to_llm_text(self) -> str:
+        """Return a text summary of the command result, for use in LLM responses."""
+        text_parts = [f"Command return code: {self.return_code}"]
+
+        if self.return_code != 0:
+            text_parts[0] += " (failed)"
+            # TODO: check if we can include more detail in the response with the return code
+
+        if self.stdout:
+            text_parts.append("Command stdout:\n" + self.clean_stdout)
+        if self.stderr:
+            text_parts.append("Command stderr:\n" + self.clean_stderr)
+
+        return "\n\n".join(text_parts)
 
 
 def run_command(command: list[str | Path]) -> CommandResult:

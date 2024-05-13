@@ -28,21 +28,21 @@
   llm_class: "OllamaLlm"
   model_name: "llama2:13b"
 
-# - configured_llm_name: "ollama_llama3_8b"
-#   llm_class: "OllamaLlm"
-#   model_name: "llama3:8b"
-# 
-# - configured_llm_name: "ollama_codellama_7b"
-#   llm_class: "OllamaLlm"
-#   model_name: "codellama:7b"
-# 
-# - configured_llm_name: "ollama_codellama_13b"
-#   llm_class: "OllamaLlm"
-#   model_name: "codellama:13b"
-# 
-# - configured_llm_name: "ollama_codellama_34b"
-#   llm_class: "OllamaLlm"
-#   model_name: "codellama:34b"
+- configured_llm_name: "ollama_llama3_8b"
+  llm_class: "OllamaLlm"
+  model_name: "llama3:8b"
+
+- configured_llm_name: "ollama_codellama_7b"
+  llm_class: "OllamaLlm"
+  model_name: "codellama:7b"
+
+- configured_llm_name: "ollama_codellama_13b"
+  llm_class: "OllamaLlm"
+  model_name: "codellama:13b"
+
+- configured_llm_name: "ollama_codellama_34b"
+  llm_class: "OllamaLlm"
+  model_name: "codellama:34b"
 
 - configured_llm_name: "chatgpt-3.5"
   llm_class: "ChatGptLlm"

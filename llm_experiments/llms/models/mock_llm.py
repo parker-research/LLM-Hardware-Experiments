@@ -61,8 +61,7 @@ class MockLlm(LlmProviderBase):
 
         else:
             response_text = (
-                "I am an 'AI' 'language' 'model'. "
-                "Responding to prompts other than the test prompts the 'morals' of my creators. "
+                'I am an "AI" "language" "model" (MockLlm). '
                 "The text I was given as input was:\n" + prompt.prompt_text
             )
 
@@ -75,7 +74,9 @@ class MockLlm(LlmProviderBase):
         self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
     ) -> LlmResponse:
         assert self._is_initialized
-        self.query_llm_basic(prompt)
+        assert isinstance(chat_history, list)
+        assert all(isinstance(item, (LlmPrompt, LlmResponse)) for item in chat_history)
+        return self.query_llm_basic(prompt)
 
     @staticmethod
     def _get_regex_match_groups(regex: str, haystack: str) -> dict[str, str]:

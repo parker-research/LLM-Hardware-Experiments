@@ -20,9 +20,10 @@ class LlmPrompt:
         self.role = role
         self.uuid = uuid.uuid4()
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         lines = [
             make_header_str(f"Start Prompt ({self.role.title()})", char=">"),
+            make_header_str(f"(uuid={self.uuid})", char=">"),
             self.prompt_text,
             make_header_str(f"End Prompt ({self.role.title()})", char=">"),
         ]
@@ -47,9 +48,10 @@ class LlmResponse:
         self.role = "assistant"  # currently, there's only one option
         self.uuid = uuid.uuid4()
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         lines = [
             make_header_str("Start Response", char="<"),
+            make_header_str(f"(uuid={self.uuid})", char=">"),
             self.response_text,
             make_header_str("End Response", char="<"),
         ]

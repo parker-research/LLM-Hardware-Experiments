@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+import orjson
 
 import git
 from loguru import logger
@@ -74,3 +76,41 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
     logger.info(f"Problems, as a table: {df}")
 
     return problems
+
+
+def parse_verilog_eval_testbench_output(testbench_output: str) -> dict:
+    """Parses the output of the verilog-eval testbench.
+
+    Args:
+        testbench_output: The output of the testbench (execute_result.stdout).
+
+    Returns:
+        A dictionary with the following keys:
+            - "testbench_stats": A JSON string, like:
+                {"mismatch_sample_count": 0, "total_sample_count": 439}
+            - "was_testbench_passed": A boolean, indicating if the testbench passed.
+    """
+
+    # Find "Hint: Total mismatched samples is 0 out of 439 samples"
+    tb_match = re.search(
+        r"Total mismatched samples is (?P<mismatch_sample_count>\d+) out of (?P<total_sample_count>\d+) samples",  # noqa
+        testbench_output,
+        re.IGNORECASE,
+    )
+    if not tb_match:
+        raise ValueError("Could not find mismatched sample count in testbench output.")
+
+    parse_output = {
+        "testbench_stats": None,
+        "was_testbench_passed": None,
+    }
+    mismatch_sample_count = int(tb_match.group("mismatch_sample_count"))
+    total_sample_count = int(tb_match.group("total_sample_count"))
+    parse_output["testbench_stats"] = orjson.dumps(
+        {
+            "mismatch_sample_count": mismatch_sample_count,
+            "total_sample_count": total_sample_count,
+        }
+    ).decode()
+    parse_output["was_testbench_passed"] = mismatch_sample_count == 0
+    return parse_output

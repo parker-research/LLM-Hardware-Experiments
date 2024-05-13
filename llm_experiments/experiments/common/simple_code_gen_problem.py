@@ -25,7 +25,8 @@ class SimpleCodeGenProblem:
         self.code_language = code_language
         self.other_data = other_data
 
-    def _fully_qualify_file_names(self, vcd_folder_path: Path, source_code: str) -> str:
+    @staticmethod
+    def _fully_qualify_file_names(vcd_folder_path: Path, source_code: str) -> str:
         """Fully qualify the file names in the code.
         Returns the source code with the file names fully qualified.
         """
