@@ -386,7 +386,9 @@ def do_experiment(
 
 
 def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int = 5) -> None:
-    logger.info("Starting simple single code generation experiment.")
+    logger.info(f"Starting: {__file__} -> run_experiment_all_inputs(...)")
+    logger.info(f"Using LLM config file: {llm_config_file_path}")
+    logger.info(f"Max cycles: {max_cycles}")
 
     experiment_group_start_timestamp = datetime.now()
     experiment_group_start_timestamp_str = get_file_date_str(
