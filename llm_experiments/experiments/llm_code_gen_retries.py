@@ -178,15 +178,22 @@ def do_cycle(
     # Store the conversation history
     if experiment_state_store.conversation_histories.get("designer_agent") is None:
         experiment_state_store.conversation_histories["designer_agent"] = []
-    experiment_state_store.conversation_histories["designer_agent"].append(llm_prompt)
+    experiment_state_store.conversation_histories["designer_agent"].extend(
+        [
+            llm_prompt,
+            llm_response,
+        ]
+    )
 
-    # Write logs
-    (cycle_llm_dir / "llm_log.jsonl").write_bytes(
-        orjson.dumps(llm_prompt.to_dict()) + b"\n" + orjson.dumps(llm_response.to_dict()) + b"\n"
-    )
-    (cycle_llm_dir / "llm_log.txt").write_text(
-        str(llm_prompt) + "\n\n" + str(llm_response) + "\n\n"
-    )
+    # Write LLM logs before executing the code
+    for agent_name in experiment_state_store.conversation_histories.keys():
+        agent_chat_history = experiment_state_store.conversation_histories[agent_name]
+        (cycle_llm_dir / f"llm_log_{agent_name}.jsonl").write_bytes(
+            b"\n".join([orjson.dumps(hist.to_dict()) for hist in agent_chat_history]) + b"\n"
+        )
+        (cycle_llm_dir / f"llm_log_{agent_name}.txt").write_text(
+            "\n\n".join([str(hist) for hist in agent_chat_history]) + "\n"
+        )
 
     testbench_code = problem.get_testbench_code(vcd_folder_path=cycle_iverilog_dir)
 
@@ -307,11 +314,14 @@ def do_experiment(
     experiment_execution_uuid = uuid.uuid4()
 
     # Prep the return data
-    experiment_save_dir = (
-        working_dir
-        / f"experiments_{llm.configured_llm_name}"
-        / f"{problem.problem_id}_{experiment_execution_uuid}"
-    )
+    (
+        experiment_save_dir := (
+            working_dir
+            / f"experiments_{llm.configured_llm_name}"
+            / f"{problem.problem_id}_{experiment_execution_uuid}"
+        )
+    ).mkdir(parents=True)
+    logger.info(f"Will save experiment data to: {experiment_save_dir}")
 
     experiment_data = {
         "experiment_group_start_timestamp": logging_attributes["experiment_group_start_timestamp"],
