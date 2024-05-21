@@ -15,7 +15,7 @@ The experiment is as follows:
 
 from pathlib import Path
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 import traceback
 import re
 
@@ -42,7 +42,12 @@ from llm_experiments.experiments.common.simple_code_gen_problem import SimpleCod
 from llm_experiments.experiments.common.verilog_eval_problems import load_verilog_eval_problems
 from llm_experiments.intermediate_steps.extract_verilog import extract_verilog_module_from_text
 
-iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
+iverilog_tool = IverilogTool(
+    config=IverilogToolConfig(
+        configured_tool_name="iverilog_v20240501",
+        release_version_date=date(2024, 5, 1),
+    )
+)
 
 
 def do_experiment(

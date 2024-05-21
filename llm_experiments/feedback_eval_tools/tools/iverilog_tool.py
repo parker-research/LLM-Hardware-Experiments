@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 from typing import Literal, Optional
-from datetime import date
+from datetime import date, timedelta
 
 from llm_experiments.feedback_eval_tools.feedback_eval_tool_base import (
     FeedbackEvalToolConfigBase,
@@ -17,6 +17,7 @@ class IverilogToolConfig(FeedbackEvalToolConfigBase):
     syntax_version: Literal["sv2012"] = "sv2012"  # TODO: maybe add support for others
     show_warnings: bool = True
     release_version_date: Optional[date]
+    max_sim_execution_time: timedelta = timedelta(seconds=15)
 
     def to_command_args(self) -> list[str]:
         args = []
@@ -69,7 +70,7 @@ class IverilogTool(FeedbackEvalToolBase):
     ) -> CommandResult:
         compile_command = (
             ["iverilog"]
-            + self.config.to_command_args()
+            + self.config.to_command_args()  # like ['-g2012', '-Wall']
             + ["-o", str(output_vvp_file_path)]
             + verilog_file_list
         )

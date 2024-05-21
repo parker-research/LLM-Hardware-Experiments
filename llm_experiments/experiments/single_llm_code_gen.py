@@ -17,7 +17,7 @@ The experiment is as follows:
 
 from pathlib import Path
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 import traceback
 import re
 import shutil
@@ -52,7 +52,12 @@ from llm_experiments.llms.models.ollama_llm import OllamaLlm
 from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_config_file
 from llm_experiments.llms.other.ollama_server import set_ollama_server_log_file_path
 
-iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
+iverilog_tool = IverilogTool(
+    config=IverilogToolConfig(
+        configured_tool_name="iverilog_v20240501",
+        release_version_date=date(2024, 5, 1),
+    )
+)
 
 
 def do_experiment(

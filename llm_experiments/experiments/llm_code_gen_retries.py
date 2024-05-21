@@ -114,8 +114,10 @@ def generate_next_prompt_text_after_fail(
         failure_stage_desc_verb = "extracting the code"
     elif compile_result.return_code != 0:
         failure_stage_desc_verb = "compiling the code"
-    elif execute_result.return_code != 0:
-        failure_stage_desc_verb = "running the code"
+    elif (execute_result.return_code != 0) or (execute_result.timed_out):
+        failure_stage_desc_verb = "running the code/simulation"
+        if execute_result.timed_out:
+            failure_stage_desc_verb += " (simulation timed out)"
     elif was_testbench_passed is False:
         failure_stage_desc_verb = "passing the testbench"
     else:
