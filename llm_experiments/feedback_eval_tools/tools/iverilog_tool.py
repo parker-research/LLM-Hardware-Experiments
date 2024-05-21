@@ -79,7 +79,10 @@ class IverilogTool(FeedbackEvalToolBase):
 
     def run_iverilog_vvp_execute_command(self, vvp_file_path: Path) -> CommandResult:
         execute_command = ["vvp", str(vvp_file_path)]
-        result = run_command(execute_command)
+        result = run_command(
+            execute_command,
+            max_execution_time=self.config.max_sim_execution_time,
+        )
         return result
 
     def run_iverilog_compile_and_execute_commands(
