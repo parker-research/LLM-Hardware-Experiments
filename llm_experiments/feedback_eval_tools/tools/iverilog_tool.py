@@ -1,19 +1,22 @@
 from dataclasses import dataclass
 from pathlib import Path
 import re
-from typing import Literal
+from typing import Literal, Optional
+from datetime import date
 
 from llm_experiments.feedback_eval_tools.feedback_eval_tool_base import (
+    FeedbackEvalToolConfigBase,
     FeedbackEvalToolBase,
 )
 from llm_experiments.util.execute_cli import run_command, CommandResult
-from llm_experiments.feedback_eval_tools.install_oss_cad import install_oss_cad
+from llm_experiments.feedback_eval_tools.install_oss_cad import install_oss_cad_and_activate
 
 
 @dataclass(kw_only=True)
-class IverilogToolConfig:
+class IverilogToolConfig(FeedbackEvalToolConfigBase):
     syntax_version: Literal["sv2012"] = "sv2012"  # TODO: maybe add support for others
     show_warnings: bool = True
+    release_version_date: Optional[date]
 
     def to_command_args(self) -> list[str]:
         args = []
@@ -31,16 +34,12 @@ class IverilogToolConfig:
 class IverilogTool(FeedbackEvalToolBase):
     """Implementation of access to the IVerilog tool."""
 
-    def __init__(
-        self,
-        configured_tool_name: str = "IVerilog_SV2012_Default",
-        config: IverilogToolConfig = IverilogToolConfig(),
-    ):
-        super().__init__(configured_tool_name)
+    def __init__(self, config: IverilogToolConfig):
         self.config: IverilogToolConfig = config
+        super().__init__()
 
     def install_and_init_tool(self) -> None:
-        install_oss_cad()
+        install_oss_cad_and_activate(self.config.release_version_date)
 
     def assert_is_usable(self):
         versions = self.get_iverilog_version()

@@ -30,15 +30,20 @@ def _make_oss_cad_storage_dir() -> Path:
     return make_data_dir("tools/oss_cad_storage", append_date=False)
 
 
-def install_oss_cad() -> None:
-    """Downloads, unzips, and sets the PATH for the OSS CAD suite."""
+def install_oss_cad_and_activate(release_date: Optional[date] = None) -> None:
+    """Downloads, unzips, and sets the PATH for the OSS CAD suite.
+
+    Args:
+        release_date (Optional[date]): The release date of the OSS CAD suite to install.
+            If None, the latest release is used.
+    """
     storage_dir = _make_oss_cad_storage_dir()
-    download_url = _get_oss_cad_download_url(None)
+    download_url = _get_oss_cad_download_url(release_date)
     local_tgz_file = storage_dir / download_url.split("/")[-1]
     assert str(local_tgz_file).endswith(".tgz")
 
     if not local_tgz_file.is_file():
-        logger.info("Downloading OSS CAD suite...")
+        logger.info(f"Downloading OSS CAD suite ({release_date=})...")
         download_large_file(download_url, local_tgz_file)
         logger.info(
             f"Downloaded OSS CAD suite file: {local_tgz_file}"
@@ -63,9 +68,11 @@ def install_oss_cad() -> None:
 
     # From guide: export PATH="<extracted_location>/oss-cad-suite/bin:$PATH"
     os.environ["PATH"] = f"{bin_dir_path.absolute()}:{os.environ['PATH']}"
+    # FIXME: can't use multiple version of this tool in a single execution
+    # FIXME: this PATH step should be moved up one level of abstraction, upon usage
 
     logger.info(f"Added OSS CAD suite to PATH: {bin_dir_path}")
 
 
 if __name__ == "__main__":
-    install_oss_cad()
+    install_oss_cad_and_activate()

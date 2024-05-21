@@ -1,4 +1,10 @@
 import abc
+import dataclasses
+
+
+@dataclasses.dataclass(kw_only=True)
+class FeedbackEvalToolConfigBase(abc.ABC):
+    configured_tool_name: str
 
 
 class FeedbackEvalToolBase(abc.ABC):
@@ -14,12 +20,18 @@ class FeedbackEvalToolBase(abc.ABC):
         - Other synthesis tools
     """
 
-    def __init__(self, configured_tool_name: str):
+    def __init__(self):
         self.base_tool_name: str = self.__class__.__name__  # IverilogTool
-        self.configured_tool_name: str = configured_tool_name
+
+        assert isinstance(self.config, FeedbackEvalToolConfigBase)
 
     def __repr__(self) -> str:
         return f"{self.base_tool_name}({self.configured_tool_name})"
+
+    @property
+    def configured_tool_name(self) -> str:
+        # effectively an alias
+        return self.config.configured_tool_name
 
     @abc.abstractmethod
     def install_and_init_tool(self) -> None:

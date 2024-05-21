@@ -18,7 +18,7 @@ The experiment is as follows:
 
 from pathlib import Path
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 import traceback
 import shutil
 from dataclasses import dataclass, field
@@ -60,7 +60,12 @@ from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_co
 from llm_experiments.llms.other.ollama_server import set_ollama_server_log_file_path
 from llm_experiments.util.strip_paths import STRIP_PATHS_START_FOLDER_NAME
 
-iverilog_tool = IverilogTool("iverilog", config=IverilogToolConfig())
+iverilog_tool = IverilogTool(
+    config=IverilogToolConfig(
+        configured_tool_name="iverilog_v20240501",
+        release_version_date=date(2024, 5, 1),
+    )
+)
 
 
 @dataclass(kw_only=True)
