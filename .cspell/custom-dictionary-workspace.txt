@@ -9,6 +9,7 @@ ndjson
 Ollama
 openai
 orjson
+pydash
 systemverilog
 testbench
 testbenches

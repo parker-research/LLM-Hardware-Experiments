@@ -1,5 +1,8 @@
 from typing import Literal, Optional
 import uuid
+from datetime import datetime, timezone
+
+import orjson
 
 # from loguru import logger
 
@@ -22,11 +25,12 @@ class LlmPrompt:
         self.role = role
         self.agent_name = agent_name
         self.uuid = uuid.uuid4()
+        self.timestamp = datetime.now(timezone.utc)
 
     def __str__(self) -> str:
         lines = [
             make_header_str(f"Start Prompt ({self.role.title()})", char=">"),
-            make_header_str(f"(uuid={self.uuid}, agent={self.agent_name})", char=">"),
+            make_header_str(f"(agent={self.agent_name}, uuid={self.uuid})", char=">"),
             self.prompt_text,
             make_header_str(f"End Prompt ({self.role.title()})", char=">"),
         ]
@@ -38,7 +42,11 @@ class LlmPrompt:
             "role": self.role,
             "agent_name": self.agent_name,
             "uuid": str(self.uuid),
+            "timestamp": self.timestamp.isoformat(),
         }
+
+    def to_json(self) -> bytes:
+        return orjson.dumps(self.to_dict())
 
 
 class LlmResponse:
@@ -54,11 +62,12 @@ class LlmResponse:
         self.role = "assistant"  # currently, there's only one option
         self.agent_name = agent_name
         self.uuid = uuid.uuid4()
+        self.timestamp = datetime.now(timezone.utc)
 
     def __str__(self) -> str:
         lines = [
             make_header_str("Start Response", char="<"),
-            make_header_str(f"(uuid={self.uuid}, agent={self.agent_name})", char="<"),
+            make_header_str(f"(agent={self.agent_name}, uuid={self.uuid})", char="<"),
             self.response_text,
             make_header_str("End Response", char="<"),
         ]
@@ -77,24 +86,8 @@ class LlmResponse:
             "role": self.role,
             "agent_name": self.agent_name,
             "uuid": str(self.uuid),
+            "timestamp": self.timestamp.isoformat(),
         }
 
-
-class LlmQuery:
-    def __init__(self, prompt: LlmPrompt, response: Optional[LlmResponse] = None):
-        self.prompt = prompt
-        self.response = response
-
-    def set_response(self, response: LlmResponse):
-        self.response = response
-
-    def __repr__(self) -> str:
-        lines = [
-            repr(self.prompt),
-            (
-                repr(self.response)
-                if self.response is not None
-                else make_header_str("No Response", char="-")
-            ),
-        ]
-        return "\n".join(lines)
+    def to_json(self) -> bytes:
+        return orjson.dumps(self.to_dict())

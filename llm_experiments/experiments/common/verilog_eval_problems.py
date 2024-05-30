@@ -54,7 +54,7 @@ def load_verilog_eval_problems() -> list[SimpleCodeGenProblem]:
     problems: list[SimpleCodeGenProblem] = []
     for row in df.iter_rows(named=True):
         problem = SimpleCodeGenProblem(
-            problem_id="verilog-eval_" + row["task_id"],
+            problem_id="ve_" + row["task_id"],  # "ve" = "verilog-eval" (NVLabs problem set)
             problem_description=row["detail_description"],
             module_header=row["prompt"],
             # In source, "canonical_solution" doesn't include the module_header ("prompt")

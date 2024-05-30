@@ -74,7 +74,8 @@ class CommandResult:
             "stdout": self.stdout,
             "stderr": self.stderr,
             "return_code": self.return_code,
-            "execution_duration": self.execution_duration,
+            "execution_duration": str(self.execution_duration),
+            "execution_duration_sec": self.execution_duration.total_seconds(),
             "timed_out": self.timed_out,
         }
 

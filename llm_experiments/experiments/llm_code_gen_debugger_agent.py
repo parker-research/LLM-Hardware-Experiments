@@ -30,6 +30,7 @@ from loguru import logger
 import polars as pl
 import fire
 from tqdm import tqdm
+import pydash
 
 from llm_experiments.logging.env_logging import (
     get_all_env_info,
@@ -38,6 +39,7 @@ from llm_experiments.logging.env_logging import (
 )
 from llm_experiments.logging.presenters import filter_keys_in_dict
 from llm_experiments.logging.data_manipulation import merge_jsonl_to_parquet
+from llm_experiments.logging.llm_logging import write_llm_conversation_to_files
 from llm_experiments.util.path_helpers import (
     make_data_dir,
     get_file_date_str,
@@ -84,16 +86,24 @@ class ExperimentStateStore:
     last_attempted_solution_code: str | None = None
     last_compile_result: CommandResult | None = None
     last_execute_result: CommandResult | None = None
-    last_was_testbench_passed: bool | None = None
+    last_was_testbench_passed: bool = False
 
     def clear_last_results(self) -> None:
         self.last_attempted_solution_code = None
         self.last_compile_result = None
         self.last_execute_result = None
-        self.last_was_testbench_passed = None
+        self.last_was_testbench_passed = False
 
     def extend_conversation_history(self, agent_name: str, history: list[LlmPrompt | LlmResponse]):
         assert all(isinstance(hist, (LlmPrompt, LlmResponse)) for hist in history)
+
+        # Ensure all history items have the correct agent name
+        for i in range(len(history)):
+            if history[i].agent_name is None:
+                history[i].agent_name = agent_name
+            else:
+                assert history[i].agent_name == agent_name
+
         if self.conversation_histories.get(agent_name) is None:
             self.conversation_histories[agent_name] = []
         self.conversation_histories[agent_name].extend(history)
@@ -165,10 +175,14 @@ def generate_debugger_prompt_text_after_fail(
         "Your coworker, the Designer Employee, has attempted to solve the following problem: ",
         f"{problem.problem_description}",
         "The solution your coworker came up with is not quite right.",
-        "The designer proposed the following solution:",
-        attempted_solution_code,
-        f"When testing it, it failed at this step: {failure_stage_desc_verb}.",
     ]
+    if attempted_solution_code is not None:
+        text_parts.append("The designer proposed the following solution:")
+        text_parts.append(attempted_solution_code)
+
+    text_parts.append(
+        f"When testing the solution, it failed at this step: {failure_stage_desc_verb}."
+    )
 
     if attempted_solution_code is None:
         text_parts.append("It is important to follow the requested top-level module template.")
@@ -187,6 +201,9 @@ def generate_debugger_prompt_text_after_fail(
         "attempt to solve the problem next time. Do not provide a solution. You may, however, "
         "reference parts of the solution in your feedback."
     )
+
+    if any(i is None for i in text_parts):
+        raise ValueError("Some text parts are None. This should not happen.")
 
     return "\n\n".join(text_parts)
 
@@ -214,9 +231,11 @@ def do_cycle(
             "designer_agent",
             [
                 LlmPrompt(
+                    "You work in a hardware design company with many employees. "
                     "You are a hardware designer with extensive Verilog experience, who is tasked "
                     "with solving a Verilog problem. You must obey instructions.",
                     role="system",
+                    agent_name="designer_agent",
                 ),
             ],
         )
@@ -224,16 +243,18 @@ def do_cycle(
             "debugger_agent",
             [
                 LlmPrompt(
+                    "You work in a hardware design company with many employees. "
                     "You are a hardware engineer with extensive debugging experience, who is "
                     "tasked with providing feedback on a Verilog solution to better solve the "
                     "problem. You must obey instructions.",
                     role="system",
+                    agent_name="debugger_agent",
                 ),
             ],
         )
 
         # Step 1: Prompt the Designer Agent, with no agent feedback
-        designer_llm_prompt = "\n".join(
+        designer_prompt_text = "\n".join(
             [
                 "Solve the following problem by writing a Verilog module.",
                 "Wrap your code in Markdown code blocks.",
@@ -257,11 +278,12 @@ def do_cycle(
             execute_result=experiment_state_store.last_execute_result,
             was_testbench_passed=experiment_state_store.last_was_testbench_passed,
         )
-        debugger_llm_prompt = LlmPrompt(debugger_prompt_text)
+        debugger_llm_prompt = LlmPrompt(debugger_prompt_text, agent_name="debugger_agent")
         debugger_llm_response: LlmResponse = llm.query_llm_chat(
             debugger_llm_prompt,
             chat_history=experiment_state_store.conversation_histories.get("debugger_agent", []),
         )
+        debugger_llm_response.agent_name = "debugger_agent"
         experiment_state_store.extend_conversation_history(
             agent_name="debugger_agent",
             history=[debugger_llm_prompt, debugger_llm_response],
@@ -277,28 +299,23 @@ def do_cycle(
         raise ValueError(f"Unknown phase: {experiment_state_store.phase}")
 
     # regardless, prompt the Designer Agent
-    designer_llm_prompt = LlmPrompt(designer_prompt_text)
+    designer_llm_prompt = LlmPrompt(designer_prompt_text, agent_name="designer_agent")
     designer_llm_response: LlmResponse = llm.query_llm_chat(
         designer_llm_prompt,
         chat_history=experiment_state_store.conversation_histories.get("designer_agent", []),
     )
+    designer_llm_response.agent_name = "designer_agent"
     experiment_state_store.extend_conversation_history(
         agent_name="designer_agent",
         history=[designer_llm_prompt, designer_llm_response],
     )
+    write_llm_conversation_to_files(
+        pydash.flatten(experiment_state_store.conversation_histories.values()),
+        cycle_llm_dir,
+    )
 
     # Clear the last results
     experiment_state_store.clear_last_results()
-
-    # Write LLM logs before executing the code
-    for agent_name in experiment_state_store.conversation_histories.keys():
-        agent_chat_history = experiment_state_store.conversation_histories[agent_name]
-        (cycle_llm_dir / f"llm_log_{agent_name}.jsonl").write_bytes(
-            b"\n".join([orjson.dumps(hist.to_dict()) for hist in agent_chat_history]) + b"\n"
-        )
-        (cycle_llm_dir / f"llm_log_{agent_name}.txt").write_text(
-            "\n\n".join([str(hist) for hist in agent_chat_history]) + "\n"
-        )
 
     testbench_code = problem.get_testbench_code(vcd_folder_path=cycle_iverilog_dir)
 
@@ -379,7 +396,7 @@ def do_cycle(
 
     # FINALLY
     cycle_log_data["exit_stage"] = "80_tb_passed"
-    experiment_state_store.has_success = True
+    experiment_state_store.last_was_testbench_passed = True
     return cycle_log_data
 
 
@@ -459,6 +476,11 @@ def do_experiment(
         if cycle_log_data["exit_stage"] == "80_tb_passed":
             experiment_data["was_testbench_passed"] = True
             break
+
+    write_llm_conversation_to_files(
+        pydash.flatten(experiment_state_store.conversation_histories.values()),
+        experiment_save_dir,
+    )
 
     merge_jsonl_to_parquet(experiment_save_dir / "cycle_log.jsonl")
 
@@ -576,6 +598,8 @@ def run_experiment_all_inputs(llm_config_file_path: str | Path, max_cycles: int 
 
             with open(experiment_data_jsonl_path, "ab") as f:
                 f.write(orjson.dumps(experiment_data) + b"\n")
+
+            logger.info("=" * 80)  # print a break
 
     logger.info("Finished all experiments.")
     logger.info(
