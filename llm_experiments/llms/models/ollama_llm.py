@@ -116,7 +116,7 @@ class OllamaLlm(LlmProviderBase):
                     progress_bar.total = stream_status["total"]
                 if ("completed" in stream_status) or ("total" in stream_status):
                     progress_bar.refresh()
-                if "done" in stream_status and stream_status["done"]:
+                if stream_status.get("done") or (stream_status.get("status") == "success"):
                     logger.info(f"Downloaded Ollama model: {self.config.model_name}")
                     break
 
