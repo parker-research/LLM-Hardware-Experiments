@@ -12,7 +12,8 @@ The experiment is as follows:
     4. Run the code through IVerilog to check if it builds.
     5. Run the code through IVerilog+vvp to run it, with the test bench.
     6. Check the testbench output to see if it passed.
-    7. If it didn't pass, provide feedback to the LLM and repeat the process.
+    7. If it didn't pass, make a "debugger agent" LLM explain the issue to the "designer agent".
+    8. Pass this feedback from the "debugger agent" to the "designer agent", and regenerate code.
 3. Save the experiment data to a file.
 """
 
@@ -80,8 +81,22 @@ class ExperimentStateStore:
     # keys: agent name, values: list of prompts and responses
     conversation_histories: dict[str, list[LlmPrompt | LlmResponse]] = field(default_factory=dict)
 
-    next_prompt_text: str | None = None
-    has_success = False
+    last_attempted_solution_code: str | None = None
+    last_compile_result: CommandResult | None = None
+    last_execute_result: CommandResult | None = None
+    last_was_testbench_passed: bool | None = None
+
+    def clear_last_results(self) -> None:
+        self.last_attempted_solution_code = None
+        self.last_compile_result = None
+        self.last_execute_result = None
+        self.last_was_testbench_passed = None
+
+    def extend_conversation_history(self, agent_name: str, history: list[LlmPrompt | LlmResponse]):
+        assert all(isinstance(hist, (LlmPrompt, LlmResponse)) for hist in history)
+        if self.conversation_histories.get(agent_name) is None:
+            self.conversation_histories[agent_name] = []
+        self.conversation_histories[agent_name].extend(history)
 
     def to_dict(self) -> dict:
         """Returns a JSON-safe dictionary representation of the state store."""
@@ -92,25 +107,48 @@ class ExperimentStateStore:
         return {
             "phase": self.phase,
             "conversation_histories": conversation_histories_basic,
-            "next_prompt_text": self.next_prompt_text,
-            "has_success": self.has_success,
+            "last_attempted_solution_code": self.last_attempted_solution_code,
+            "last_compile_result": (
+                self.last_compile_result.as_dict() if self.last_compile_result else None
+            ),
+            "last_execute_result": (
+                self.last_execute_result.as_dict() if self.last_execute_result else None
+            ),
+            "last_was_testbench_passed": self.last_was_testbench_passed,
         }
 
 
-def generate_next_designer_prompt_text_after_fail(
-    extract_code_worked: bool = True,
+def generate_designer_prompt_text_after_fail(
+    problem: SimpleCodeGenProblem,
+    debugger_feedback: str,
+) -> str:
+    """Generated the next prompt for the Designer Agent, based on the Debugger Agent's feedback."""
+    text_parts = [
+        "You have attempted to solve the following problem: ",
+        f"{problem.problem_description}",
+        "The solution you came up with is not quite right.",
+        "The Debugger Employee has provided the following feedback:",
+        debugger_feedback,
+        "Please attempt to solve the problem correctly.",
+    ]
+
+    return "\n\n".join(text_parts)
+
+
+def generate_debugger_prompt_text_after_fail(
+    problem: SimpleCodeGenProblem,
+    attempted_solution_code: str | None,
     compile_result: CommandResult | None = None,
     execute_result: CommandResult | None = None,
     was_testbench_passed: bool | None = None,
-    problem: SimpleCodeGenProblem | None = None,
 ) -> str:
-    """Generates the next prompt text based on the failure stage and the data to include.
+    """Generates the next prompt for the Debugger Agent based on the failure stage, last attempt,
+    and the tool (IVerilog) logs.
 
-    This function is intended to "add onto" a conversation history with an LLM, and thus doesn't
-    have to include the initial prompt text.
+    This function is intended to "add onto" a conversation history with an LLM.
     """
 
-    if not extract_code_worked:
+    if attempted_solution_code is None:
         failure_stage_desc_verb = "extracting the code"
     elif compile_result.return_code != 0:
         failure_stage_desc_verb = "compiling the code"
@@ -124,14 +162,16 @@ def generate_next_designer_prompt_text_after_fail(
         raise ValueError("No failure stage detected.")
 
     text_parts = [
-        "Your solution is not quite right.",
-        f"It failed at this step: {failure_stage_desc_verb}.",
+        "Your coworker, the Designer Employee, has attempted to solve the following problem: ",
+        f"{problem.problem_description}",
+        "The solution your coworker came up with is not quite right.",
+        "The designer proposed the following solution:",
+        attempted_solution_code,
+        f"When testing it, it failed at this step: {failure_stage_desc_verb}.",
     ]
 
-    if not extract_code_worked:
-        text_parts.append(
-            "Please make sure to follow the requested top-level module template in your response."
-        )
+    if attempted_solution_code is None:
+        text_parts.append("It is important to follow the requested top-level module template.")
     else:
         text_parts.append("Here is the success/failure output from each tool:")
 
@@ -142,12 +182,10 @@ def generate_next_designer_prompt_text_after_fail(
     if was_testbench_passed is False:
         text_parts.append("The testbench did not pass.")
 
-    text_parts.extend(
-        [
-            "Please try to solve the problem again: ",
-            f"{problem.problem_description}",
-            f"Template module:\n{problem.module_header}\n// Your solution here",
-        ]
+    text_parts.append(
+        "Please construct feedback for the Designer Employee, such that they can better "
+        "attempt to solve the problem next time. Do not provide a solution. You may, however, "
+        "reference parts of the solution in your feedback."
     )
 
     return "\n\n".join(text_parts)
@@ -170,27 +208,87 @@ def do_cycle(
     (cycle_llm_dir := cycle_save_dir / "llm").mkdir(parents=True)
     (cycle_iverilog_dir := cycle_save_dir / STRIP_PATHS_START_FOLDER_NAME).mkdir(parents=True)
 
-    # Step 1: Prompt the Designer LLM
-    assert experiment_state_store.next_prompt_text is not None
-    llm_prompt = LlmPrompt(experiment_state_store.next_prompt_text)
-    llm_response: LlmResponse = llm.query_llm_chat(
-        llm_prompt,
+    if experiment_state_store.phase == "init":
+        # Set the system prompts for the two agents
+        experiment_state_store.extend_conversation_history(
+            "designer_agent",
+            [
+                LlmPrompt(
+                    "You are a hardware designer with extensive Verilog experience, who is tasked "
+                    "with solving a Verilog problem. You must obey instructions.",
+                    role="system",
+                ),
+            ],
+        )
+        experiment_state_store.extend_conversation_history(
+            "debugger_agent",
+            [
+                LlmPrompt(
+                    "You are a hardware engineer with extensive debugging experience, who is "
+                    "tasked with providing feedback on a Verilog solution to better solve the "
+                    "problem. You must obey instructions.",
+                    role="system",
+                ),
+            ],
+        )
+
+        # Step 1: Prompt the Designer Agent, with no agent feedback
+        designer_llm_prompt = "\n".join(
+            [
+                "Solve the following problem by writing a Verilog module.",
+                "Wrap your code in Markdown code blocks.",
+                "Do not write anything extraneous to the Verilog solution.",
+                (
+                    "You will be given a template module. In your solution, repeat the template, "
+                    "and fill in your solution."
+                ),
+                "Your solution should be a Verilog module which meets the following requirements:",
+                f"{problem.problem_description}",
+                f"\n\nTemplate module:\n{problem.module_header}\n// Your solution here",
+            ]
+        )
+
+    elif experiment_state_store.phase == "retry":
+        # Step 1A: Prompt the Debugger Agent
+        debugger_prompt_text = generate_debugger_prompt_text_after_fail(
+            problem=problem,
+            attempted_solution_code=experiment_state_store.last_attempted_solution_code,
+            compile_result=experiment_state_store.last_compile_result,
+            execute_result=experiment_state_store.last_execute_result,
+            was_testbench_passed=experiment_state_store.last_was_testbench_passed,
+        )
+        debugger_llm_prompt = LlmPrompt(debugger_prompt_text)
+        debugger_llm_response: LlmResponse = llm.query_llm_chat(
+            debugger_llm_prompt,
+            chat_history=experiment_state_store.conversation_histories.get("debugger_agent", []),
+        )
+        experiment_state_store.extend_conversation_history(
+            agent_name="debugger_agent",
+            history=[debugger_llm_prompt, debugger_llm_response],
+        )
+
+        # Step 1B: Prompt the Designer Agent, with the Debugger Agent's feedback
+        designer_prompt_text = generate_designer_prompt_text_after_fail(
+            problem=problem,
+            debugger_feedback=debugger_llm_response.response_text,
+        )
+
+    else:
+        raise ValueError(f"Unknown phase: {experiment_state_store.phase}")
+
+    # regardless, prompt the Designer Agent
+    designer_llm_prompt = LlmPrompt(designer_prompt_text)
+    designer_llm_response: LlmResponse = llm.query_llm_chat(
+        designer_llm_prompt,
         chat_history=experiment_state_store.conversation_histories.get("designer_agent", []),
     )
-    assert isinstance(llm_response, LlmResponse)
-
-    # Safety: Clear the next prompt text for the next cycle (must be recreated by following logic)
-    experiment_state_store.next_prompt_text = None
-
-    # Store the conversation history
-    if experiment_state_store.conversation_histories.get("designer_agent") is None:
-        experiment_state_store.conversation_histories["designer_agent"] = []
-    experiment_state_store.conversation_histories["designer_agent"].extend(
-        [
-            llm_prompt,
-            llm_response,
-        ]
+    experiment_state_store.extend_conversation_history(
+        agent_name="designer_agent",
+        history=[designer_llm_prompt, designer_llm_response],
     )
+
+    # Clear the last results
+    experiment_state_store.clear_last_results()
 
     # Write LLM logs before executing the code
     for agent_name in experiment_state_store.conversation_histories.keys():
@@ -207,9 +305,9 @@ def do_cycle(
     cycle_log_data = {
         "experiment_execution_uuid": str(experiment_execution_uuid),  # FK to the experiment
         "cycle_uuid": str(cycle_uuid),
-        "llm_prompt": llm_prompt.prompt_text,
-        "llm_response": llm_response.response_text,
-        "llm_response_metadata": orjson.dumps(llm_response.metadata).decode(),
+        "llm_prompt": designer_llm_prompt.prompt_text,
+        "llm_response": designer_llm_response.response_text,
+        "llm_response_metadata": orjson.dumps(designer_llm_response.metadata).decode(),
         "extracted_generated_code": None,
         # "testbench_code": testbench_code,
         "compile_result_return_code": None,
@@ -226,14 +324,11 @@ def do_cycle(
     }
 
     # Step 2: Extract the generated code
-    attempted_solution_code: str | None = llm_response.extract_code("verilog_module")
+    attempted_solution_code: str | None = designer_llm_response.extract_code("verilog_module")
+    experiment_state_store.last_attempted_solution_code = attempted_solution_code
     if attempted_solution_code is None:
         # logger.warning("Could not extract code from LLM response.")
         cycle_log_data["exit_stage"] = "20_code_extraction_error"
-        experiment_state_store.next_prompt_text = generate_next_designer_prompt_text_after_fail(
-            extract_code_worked=False,
-            problem=problem,
-        )
         experiment_state_store.phase = "retry"
         return cycle_log_data
 
@@ -255,13 +350,9 @@ def do_cycle(
     compile_result.command_step_name = "compile"
     cycle_log_data.update(compile_result.as_update_dict())
     compile_result.write_to_files(cycle_iverilog_dir)
+    experiment_state_store.last_compile_result = compile_result
     if compile_result.return_code != 0:
         cycle_log_data["exit_stage"] = "30_iverilog_compile_error"
-        experiment_state_store.next_prompt_text = generate_next_designer_prompt_text_after_fail(
-            extract_code_worked=True,
-            compile_result=compile_result,
-            problem=problem,
-        )
         experiment_state_store.phase = "retry"
         return cycle_log_data
 
@@ -270,14 +361,9 @@ def do_cycle(
     execute_result.command_step_name = "execute"
     cycle_log_data.update(execute_result.as_update_dict())
     execute_result.write_to_files(cycle_iverilog_dir)
+    experiment_state_store.last_execute_result = execute_result
     if execute_result.return_code != 0:
         cycle_log_data["exit_stage"] = "40_iverilog_execute_error"
-        experiment_state_store.next_prompt_text = generate_next_designer_prompt_text_after_fail(
-            extract_code_worked=True,
-            compile_result=compile_result,
-            execute_result=execute_result,
-            problem=problem,
-        )
         experiment_state_store.phase = "retry"
         return cycle_log_data
 
@@ -288,14 +374,6 @@ def do_cycle(
 
     if not tb_result["was_testbench_passed"]:
         cycle_log_data["exit_stage"] = "60_tb_failed"
-        experiment_state_store.phase = "retry"
-        experiment_state_store.next_prompt_text = generate_next_designer_prompt_text_after_fail(
-            extract_code_worked=True,
-            compile_result=compile_result,
-            execute_result=execute_result,
-            was_testbench_passed=False,
-            problem=problem,
-        )
         experiment_state_store.phase = "retry"
         return cycle_log_data
 
@@ -347,22 +425,7 @@ def do_experiment(
         "was_testbench_passed": False,
     }
 
-    initial_llm_prompt_text = "\n".join(
-        [
-            "You are a Verilog designer solving an elementary implementation problem.",
-            "Solve the following problem by writing a Verilog module.",
-            "Wrap your code in Markdown code blocks.",
-            "Do not write anything extraneous to the Verilog solution.",
-            (
-                "You will be given a template module. In your solution, repeat the template, and "
-                "fill in your solution."
-            ),
-            "Your solution should be a Verilog module which meets the following requirements: ",
-            f"{problem.problem_description}",
-            f"\n\nTemplate module:\n{problem.module_header}\n// Your solution here",
-        ]
-    )
-    experiment_state_store = ExperimentStateStore(next_prompt_text=initial_llm_prompt_text)
+    experiment_state_store = ExperimentStateStore()
 
     for cycle_num in range(0, max_cycles):
         (cycle_save_dir := experiment_save_dir / f"cycle_{cycle_num:02}").mkdir(parents=True)

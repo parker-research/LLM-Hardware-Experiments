@@ -10,7 +10,9 @@ from llm_experiments.intermediate_steps.extract_verilog import extract_verilog_m
 class LlmPrompt:
     role_literal_t = Literal["user", "system"]
 
-    def __init__(self, prompt_text: str, role: role_literal_t = "user"):
+    def __init__(
+        self, prompt_text: str, role: role_literal_t = "user", agent_name: str | None = None
+    ):
         assert isinstance(
             prompt_text, str
         ), f"prompt_text must be a string, not {type(prompt_text)}"
@@ -18,12 +20,13 @@ class LlmPrompt:
 
         self.prompt_text = prompt_text
         self.role = role
+        self.agent_name = agent_name
         self.uuid = uuid.uuid4()
 
     def __str__(self) -> str:
         lines = [
             make_header_str(f"Start Prompt ({self.role.title()})", char=">"),
-            make_header_str(f"(uuid={self.uuid})", char=">"),
+            make_header_str(f"(uuid={self.uuid}, agent={self.agent_name})", char=">"),
             self.prompt_text,
             make_header_str(f"End Prompt ({self.role.title()})", char=">"),
         ]
@@ -33,12 +36,15 @@ class LlmPrompt:
         return {
             "prompt_text": self.prompt_text,
             "role": self.role,
+            "agent_name": self.agent_name,
             "uuid": str(self.uuid),
         }
 
 
 class LlmResponse:
-    def __init__(self, response_text: str, metadata: Optional[dict] = None):
+    def __init__(
+        self, response_text: str, metadata: Optional[dict] = None, agent_name: str | None = None
+    ):
         assert isinstance(
             response_text, str
         ), f"response_text must be a string, not {type(response_text)}"
@@ -46,12 +52,13 @@ class LlmResponse:
         self.metadata = metadata
 
         self.role = "assistant"  # currently, there's only one option
+        self.agent_name = agent_name
         self.uuid = uuid.uuid4()
 
     def __str__(self) -> str:
         lines = [
             make_header_str("Start Response", char="<"),
-            make_header_str(f"(uuid={self.uuid})", char=">"),
+            make_header_str(f"(uuid={self.uuid}, agent={self.agent_name})", char="<"),
             self.response_text,
             make_header_str("End Response", char="<"),
         ]
@@ -68,6 +75,7 @@ class LlmResponse:
             "response_text": self.response_text,
             "metadata": self.metadata,
             "role": self.role,
+            "agent_name": self.agent_name,
             "uuid": str(self.uuid),
         }
 

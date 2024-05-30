@@ -69,6 +69,15 @@ class CommandResult:
 
         return "\n\n".join(text_parts)
 
+    def as_dict(self) -> dict:
+        return {
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "return_code": self.return_code,
+            "execution_duration": self.execution_duration,
+            "timed_out": self.timed_out,
+        }
+
 
 def run_command(
     command: list[str | Path], max_execution_time: Optional[timedelta] = None
