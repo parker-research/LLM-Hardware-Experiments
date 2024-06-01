@@ -134,6 +134,14 @@ agent_usage_variants = [
         debugger_prompt_instruction_location="top",
         wrap_verilog_code_in_md_code_blocks=True,
     ),
+    AgentUsageVariant(
+        name="v3",
+        repeat_last_attempt_in_reprompts_to_designer=False,  # expensive with little benefit
+        add_line_number_prefixes_to_code=True,
+        debugger_prompt_phrasing_variant="be_specific",
+        debugger_prompt_instruction_location="bottom",
+        wrap_verilog_code_in_md_code_blocks=True,
+    ),
 ]
 
 
@@ -396,7 +404,11 @@ def do_conversation_cycle(
         if agent_usage_variant.add_line_number_prefixes_to_code and (
             attempted_solution_code_for_llm is not None
         ):
-            attempted_solution_code_for_llm = add_line_numbers(attempted_solution_code_for_llm)
+            attempted_solution_code_for_llm = add_line_numbers(
+                attempted_solution_code_for_llm,
+                location="prefix",
+                start_line_number=3,  # 'timescale' line, plus a blank line, are prepended in exec
+            )
 
         # Step 1A: Prompt the Debugger Agent
         debugger_prompt_text = generate_debugger_prompt_text_after_fail(
