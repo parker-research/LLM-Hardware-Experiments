@@ -1,9 +1,13 @@
+import pytest
+
 from llm_experiments.llms.llm_from_config import make_llm_providers_from_yaml_config_file
 from llm_experiments.util.path_helpers import get_path_to_git_repo_root
 from llm_experiments.llms.llm_provider_base import LlmProviderBase
 
 
 def test_make_llm_providers_from_yaml_config_file():
+    pytest.skip("Now that Ollama LLMs are downloaded upon construction, this test takes forever.")
+
     config1_path = get_path_to_git_repo_root() / "llm_config.sample.yaml"
     providers = make_llm_providers_from_yaml_config_file(config1_path)
 

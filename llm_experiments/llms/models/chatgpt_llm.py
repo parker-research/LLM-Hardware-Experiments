@@ -76,7 +76,7 @@ class ChatGptLlm(LlmProviderBase):
         _chat_history = chat_history.copy()
         for _ in range(len(chat_history)):
             try:
-                return self._query_llm_chat_api(prompt, chat_history)
+                return self._query_llm_chat_api(prompt, _chat_history)
             except Exception as e:
                 if "This model's maximum context length is" in str(e):
                     logger.info(f"Left-truncated chat history due to context length error: {e}")
