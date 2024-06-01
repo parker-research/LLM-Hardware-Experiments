@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Literal
 
 import openai
+from loguru import logger
 
 from llm_experiments.llms.llm_provider_base import LlmProviderBase
 from llm_experiments.llms.llm_config_base import LlmConfigBase
@@ -66,6 +67,30 @@ class ChatGptLlm(LlmProviderBase):
         return resp
 
     def query_llm_chat(
+        self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
+    ) -> LlmResponse:
+        # add bypass for empty chat history (using this from the basic call)
+        if len(chat_history) == 0:
+            return self._query_llm_chat_api(prompt, chat_history)
+
+        _chat_history = chat_history.copy()
+        for _ in range(len(chat_history)):
+            try:
+                return self._query_llm_chat_api(prompt, chat_history)
+            except Exception as e:
+                if "This model's maximum context length is" in str(e):
+                    logger.info(f"Left-truncated chat history due to context length error: {e}")
+                    # Hit ChatGPT model's maximum context length. Chop off message history.
+                    # Do not remove the system prompt, though.
+                    if _chat_history[0].role == "system":
+                        _chat_history.pop(1)
+                    else:
+                        _chat_history.pop(0)
+                else:
+                    raise e
+        raise Exception("Failed to query LLM after multiple attempts of truncation.")
+
+    def _query_llm_chat_api(
         self, prompt: LlmPrompt, chat_history: list[LlmPrompt | LlmResponse]
     ) -> LlmResponse:
         assert self._is_initialized
