@@ -10,6 +10,7 @@ Ollama
 openai
 orjson
 pydash
+reprompts
 systemverilog
 testbench
 testbenches
