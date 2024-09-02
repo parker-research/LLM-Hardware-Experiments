@@ -14,7 +14,7 @@ wheel>=*
 ############################
 # General Packages #########
 ############################
-polars~=0.20.21
+polars~=1.6.0
 requests>=*
 loguru>=*
 pyyaml>=*

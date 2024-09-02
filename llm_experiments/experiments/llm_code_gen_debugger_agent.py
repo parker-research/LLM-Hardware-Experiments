@@ -87,11 +87,13 @@ class AgentUsageVariant:
     debugger_prompt_phrasing_variant: Literal["basic", "be_specific"] = "basic"
     debugger_prompt_instruction_location: Literal["top", "bottom"] = "bottom"
 
-    # Whether to wrap the Verilog code in Markdown code blocks in prompts to the LLM
+    # Whether to wrap the Verilog code in Markdown code blocks in prompts to the LLM.
+    # Legacy setting; should always be True going forwards.
     wrap_verilog_code_in_md_code_blocks: bool = False
 
     # In the future, the `llm_code_gen_retries.py` experiment should be refactored into
     # this file, and enable_debugger_agent=False should run that experiment.
+    # Currently, this must be True, or an error will be raised.
     enable_debugger_agent: bool = True
 
 
