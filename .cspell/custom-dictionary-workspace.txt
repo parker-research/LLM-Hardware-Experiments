@@ -3,6 +3,7 @@ codellama
 CPUS
 endmodule
 Iverilog
+langchain
 llms
 loguru
 ndjson

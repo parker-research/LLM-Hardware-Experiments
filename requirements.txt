@@ -7,21 +7,21 @@
 ############################
 # Installing Packages ######
 ############################
-pip>=*
-wheel>=*
+pip
+wheel
 
 
 ############################
 # General Packages #########
 ############################
 polars~=1.6.0
-requests>=*
-loguru>=*
-pyyaml>=*
-gitpython>=*
-orjson>=*
-tqdm>=*
-backoff>=*
+requests
+loguru
+pyyaml
+gitpython
+orjson
+tqdm
+backoff
 fire~=0.6.0
 pydash~=8.0.1
 
@@ -32,13 +32,19 @@ pydash~=8.0.1
 ollama~=0.1.8
 openai~=1.24.0
 
+langchain~=0.2.15
+langchain_openai~=0.1.23
+langchain_community~=0.2.15
 
-torch>=*
-tensorflow>=*
+# Dependency for web-based RAG.
+beautifulsoup4~=4.12.3
+
+torch
+tensorflow
 
 ###################
 # Dev Tools #######
 ###################
-pytest>=*
-flake8>=*
-black>=*
+pytest
+flake8
+black
